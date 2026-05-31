@@ -1,8 +1,13 @@
 import axios from 'axios';
 
 // Create Axios instance with base URL
+// https://api.menukit.debuggers.co.in
+// http://127.0.0.1:8000
+
+const BASE_URL="http://127.0.0.1:8000"
+
 export const api = axios.create({
-  baseURL: 'https://api.menukit.debuggers.co.in/api/v1',
+  baseURL: `${BASE_URL}/api/v1`,
   headers: {
     'Content-Type': 'application/json',
   },
@@ -37,7 +42,7 @@ api.interceptors.response.use(
         }
         
         // Request new access token
-        const res = await axios.post('https://api.menukit.debuggers.co.in/api/v1/auth/refresh', {
+        const res = await axios.post(`${BASE_URL}/api/v1/auth/refresh`, {
           refresh_token: refreshToken
         });
         

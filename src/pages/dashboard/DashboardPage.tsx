@@ -77,7 +77,7 @@ export function DashboardPage() {
         <div className="w-24 h-24 bg-primary-100 dark:bg-primary-900/30 rounded-full flex items-center justify-center mb-6">
           <Store className="w-12 h-12 text-primary" />
         </div>
-        <h2 className="text-3xl font-heading font-bold mb-4">Welcome to SmartMenu QR!</h2>
+        <h2 className="text-3xl font-heading font-bold mb-4">Welcome to Menukit!</h2>
         <p className="text-slate-500 max-w-md mb-8 text-lg">
           Let's get started by setting up your restaurant profile. It only takes a minute.
         </p>

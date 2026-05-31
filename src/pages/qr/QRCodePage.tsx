@@ -190,13 +190,13 @@ export function QRCodePage() {
       textGradient.addColorStop(1, '#f59e0b');
       ctx.fillStyle = textGradient;
       ctx.font = 'bold 44px system-ui, -apple-system, sans-serif';
-      ctx.fillText('SmartMenu QR', canvas.width / 2, currentY);
+      ctx.fillText('MenuKit', canvas.width / 2, currentY);
       currentY += 60;
       
       // Draw Site Link
       ctx.fillStyle = '#94a3b8';
       ctx.font = 'bold 24px system-ui, -apple-system, sans-serif';
-      ctx.fillText('smartmenuqr.com', canvas.width / 2, currentY);
+      ctx.fillText('menukit.debuggers.co.in', canvas.width / 2, currentY);
 
       // 9. Export and Download
       const dataUrl = canvas.toDataURL('image/png');
@@ -368,8 +368,8 @@ export function QRCodePage() {
             </div>
             <div class="branding">
               <p class="powered-by">Powered By</p>
-              <h2 class="brand-name">SmartMenu QR</h2>
-              <a href="https://smartmenuqr.com" class="site-link" target="_blank" rel="noopener noreferrer">smartmenuqr.com</a>
+              <h2 class="brand-name">MenuKit</h2>
+              <a href="https://menukit.debuggers.co.in" class="site-link" target="_blank" rel="noopener noreferrer">menukit.debuggers.co.in</a>
             </div>
           </div>
           <script>
@@ -448,14 +448,14 @@ export function QRCodePage() {
             {/* Branding */}
             <div className="mt-8 flex flex-col items-center">
               <span className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Powered By</span>
-              <span className="text-sm font-extrabold bg-gradient-to-r from-orange-600 to-amber-500 bg-clip-text text-transparent mt-0.5">SmartMenu QR</span>
+              <span className="text-sm font-extrabold bg-gradient-to-r from-orange-600 to-amber-500 bg-clip-text text-transparent mt-0.5">MenuKit</span>
               <a
-                href="https://smartmenuqr.com"
+                href="https://menukit.debuggers.co.in"
                 target="_blank"
                 rel="noopener noreferrer"
                 className="text-[10px] text-slate-400 hover:text-orange-500 transition-colors mt-1 flex items-center gap-1"
               >
-                smartmenuqr.com
+                menukit.debuggers.co.in
                 <ExternalLink size={8} />
               </a>
             </div>

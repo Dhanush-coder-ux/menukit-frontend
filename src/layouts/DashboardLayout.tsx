@@ -50,7 +50,7 @@ export function DashboardLayout() {
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex inset-y-0 left-0 z-50 w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex-col h-full">
         <div className="h-16 flex items-center px-6 border-b border-slate-200 dark:border-slate-800 shrink-0">
-          <h1 className="text-xl font-heading font-bold text-primary">SmartMenu QR</h1>
+          <h1 className="text-xl font-heading font-bold text-primary">Menukit</h1>
         </div>
 
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
@@ -120,7 +120,7 @@ export function DashboardLayout() {
               <QrCode size={14} className="text-white" />
             </div>
             <span className="text-base font-bold bg-gradient-to-r from-orange-600 to-amber-500 bg-clip-text text-transparent">
-              SmartMenu QR
+              Menukit
             </span>
           </div>
         </div>
