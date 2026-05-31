@@ -11,14 +11,18 @@ import {
   LogOut,
   User as UserIcon,
   MoreHorizontal,
-  ChevronRight
+  ChevronRight,
+  Languages
 } from 'lucide-react';
 import { useAuthStore } from '@/store/authStore';
 import { cn } from '@/utils/cn';
 import { Modal } from '@/components/ui/Modal';
+import { GoogleTranslate } from '@/components/GoogleTranslate';
+import { LanguageSelectorModal } from '@/components/LanguageSelectorModal';
 
 export function DashboardLayout() {
   const [isMoreMenuOpen, setIsMoreMenuOpen] = useState(false);
+  const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
   const { user, logout } = useAuthStore();
   const location = useLocation();
 
@@ -47,10 +51,18 @@ export function DashboardLayout() {
 
   return (
     <div className="h-[100dvh] overflow-hidden bg-slate-50 dark:bg-slate-950 flex pb-16 lg:pb-0">
+      <GoogleTranslate />
       {/* Desktop Sidebar */}
       <aside className="hidden lg:flex inset-y-0 left-0 z-50 w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 flex-col h-full">
-        <div className="h-16 flex items-center px-6 border-b border-slate-200 dark:border-slate-800 shrink-0">
+        <div className="h-16 flex items-center justify-between px-6 border-b border-slate-200 dark:border-slate-800 shrink-0">
           <h1 className="text-xl font-heading font-bold text-primary">Menukit</h1>
+          <button 
+            onClick={() => setIsLanguageModalOpen(true)}
+            className="w-8 h-8 rounded-full bg-white/20 backdrop-blur-md border border-primary-400 flex items-center justify-center text-white shadow-sm hover:bg-white/30 transition-colors"
+            title="Change Language"
+          >
+            <Languages size={18} className='text-primary-500'/>
+          </button>
         </div>
 
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-1">
@@ -114,7 +126,8 @@ export function DashboardLayout() {
       {/* Main Content */}
       <main className="flex-1 flex flex-col min-w-0 h-full overflow-hidden">
         {/* Mobile Top Header */}
-        <div className="lg:hidden flex items-center justify-center h-14 bg-white/20 dark:bg-slate-900/80 backdrop-blur-lg border-b border-slate-200/50 dark:border-slate-800/50 shrink-0 z-30 shadow-sm">
+        <div className="lg:hidden flex items-center justify-between px-4 h-14 bg-white/20 dark:bg-slate-900/80 backdrop-blur-lg border-b border-slate-200/50 dark:border-slate-800/50 shrink-0 z-30 shadow-sm">
+          <div className="w-8"></div> {/* Spacer for centering */}
           <div className="flex items-center gap-2">
             <div className="w-7 h-7 rounded-lg bg-gradient-to-br from-orange-500 to-amber-500 flex items-center justify-center shadow-sm">
               <QrCode size={14} className="text-white" />
@@ -123,6 +136,12 @@ export function DashboardLayout() {
               Menukit
             </span>
           </div>
+          <button 
+            onClick={() => setIsLanguageModalOpen(true)}
+            className="w-8 h-8 rounded-full bg-white/50 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
+          >
+            <Languages size={18} />
+          </button>
         </div>
 
         {/* Page Content */}
@@ -253,6 +272,12 @@ export function DashboardLayout() {
           </div>
         </div>
       </Modal>
+
+      <LanguageSelectorModal
+        isOpen={isLanguageModalOpen}
+        onClose={() => setIsLanguageModalOpen(false)}
+        primaryColor="#f97316"
+      />
     </div>
   );
 }

@@ -1,11 +1,13 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useSearchParams } from 'react-router';
-import { Search, Flame, MapPin, Phone, Info, UtensilsCrossed, X, Star, LayoutGrid, List as ListIcon, Clock, Sparkles, ExternalLink, SlidersHorizontal, Check } from 'lucide-react';
+import { Search, Flame, MapPin, Phone, Info, UtensilsCrossed, X, Star, LayoutGrid, List as ListIcon, Clock, Sparkles, ExternalLink, SlidersHorizontal, Check, Languages } from 'lucide-react';
 import { api } from '@/services/api';
 import { Shop, Category, MenuItem } from '@/types';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { Modal } from '@/components/ui/Modal';
 import { Lightbox } from '@/components/ui/Lightbox';
+import { GoogleTranslate } from '@/components/GoogleTranslate';
+import { LanguageSelectorModal } from '@/components/LanguageSelectorModal';
 
 // This is a special interface for the public menu structure returned by the backend
 interface PublicCategory extends Category {
@@ -53,6 +55,7 @@ export function PublicMenuPage() {
   // Details Modal
   const [selectedItem, setSelectedItem] = useState<MenuItem | null>(null);
   const [isShopInfoOpen, setIsShopInfoOpen] = useState(false);
+  const [isLanguageModalOpen, setIsLanguageModalOpen] = useState(false);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
   const [showWelcome, setShowWelcome] = useState(false);
   const [welcomePhase, setWelcomePhase] = useState<'entering' | 'visible' | 'exiting' | 'hidden'>('hidden');
@@ -463,6 +466,7 @@ export function PublicMenuPage() {
 
       {/* Banner & Header */}
       <div className="relative">
+        <GoogleTranslate />
         {shop.banner_url ? (
           <img src={shop.banner_url} alt="Restaurant Banner" className="w-full h-48 sm:h-64 object-cover" />
         ) : (
@@ -472,6 +476,12 @@ export function PublicMenuPage() {
         )}
         
         <div className="absolute top-4 right-4 flex gap-2">
+          <button 
+            onClick={() => setIsLanguageModalOpen(true)}
+            className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-white shadow-sm hover:bg-white/30 transition-colors"
+          >
+            <Languages size={20}className='text-primary-400' />
+          </button>
           <button 
             onClick={() => setIsShopInfoOpen(true)}
             className="w-10 h-10 rounded-full bg-white/20 backdrop-blur-md border border-white/30 flex items-center justify-center text-white shadow-sm hover:bg-white/30 transition-colors"
@@ -492,9 +502,8 @@ export function PublicMenuPage() {
       </div>
 
       <div className="pt-16 px-4 max-w-3xl mx-auto">
-        <div className="text-center mb-6">
+        <div className="text-center mb-4">
           <h1 className="text-3xl font-bold font-heading">{shop.name}</h1>
-
         </div>
 
         {/* Search & View Toggle */}
@@ -1046,6 +1055,12 @@ export function PublicMenuPage() {
           </a>
         </div>
       </div>
+
+      <LanguageSelectorModal
+        isOpen={isLanguageModalOpen}
+        onClose={() => setIsLanguageModalOpen(false)}
+        primaryColor={primaryColor}
+      />
     </div>
   );
 }
