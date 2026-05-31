@@ -35,6 +35,8 @@ export function MenuItemsPage() {
   const [imageToDelete, setImageToDelete] = useState<{itemId: string, imageId: string} | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
   
+  const [pendingImages, setPendingImages] = useState<File[]>([]);
+  
   const defaultForm = {
     category_id: '',
     name: '',
@@ -104,6 +106,7 @@ export function MenuItemsPage() {
         category_id: activeTab !== 'all' ? activeTab : categories[0]?.id || '' 
       });
     }
+    setPendingImages([]);
     setCurrentStep(1);
     setIsModalOpen(true);
   };
@@ -139,10 +142,30 @@ export function MenuItemsPage() {
 
       if (editingItem) {
         await api.put(`/menu-items/${editingItem.id}`, payload);
-        toast.success('Item updated');
+        toast.success('Menu updated');
       } else {
-        await api.post('/menu-items', payload);
-        toast.success('Item created');
+        const res = await api.post('/menu-items', payload);
+        
+        if (pendingImages.length > 0) {
+          toast.loading('Uploading images...', { id: 'upload-toast' });
+          for (let i = 0; i < pendingImages.length; i++) {
+            const fd = new FormData();
+            fd.append('file', pendingImages[i]);
+            fd.append('folder', 'items');
+            fd.append('item_id', res.data.id);
+            fd.append('is_primary', i === 0 ? 'true' : 'false');
+            try {
+              await api.post('/upload/image', fd, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+              });
+            } catch (err) {
+              console.error('Failed to upload image', err);
+            }
+          }
+          toast.dismiss('upload-toast');
+        }
+        
+        toast.success('Menu created');
       }
       setIsModalOpen(false);
       fetchData();
@@ -187,7 +210,7 @@ export function MenuItemsPage() {
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
           <h2 className="text-2xl font-bold font-heading">Menu Items</h2>
-          <p className="text-slate-500">Add and manage your food items.</p>
+          <p className="text-slate-500">Add and manage your menus.</p>
         </div>
       </div>
 
@@ -224,7 +247,7 @@ export function MenuItemsPage() {
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
             <input
               type="text"
-              placeholder="Search dishes..."
+              placeholder="Search menus..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className="w-full h-10 pl-9 pr-4 rounded-full border border-slate-200 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-primary dark:bg-slate-900 dark:border-slate-700"
@@ -260,12 +283,12 @@ export function MenuItemsPage() {
             <Filter className="w-12 h-12 text-slate-300 mb-4" />
             <h3 className="text-lg font-medium text-slate-900 dark:text-white mb-2">No items found</h3>
             <p className="text-slate-500 max-w-sm mb-6">
-              {searchQuery ? `No dishes match "${searchQuery}"` : "You haven't added any dishes to this category yet."}
+              {searchQuery ? `No menus match "${searchQuery}"` : "You haven't added any menus to this category yet."}
             </p>
             {categories.length > 0 ? (
-              <Button onClick={() => openModal()} variant="secondary">Add First Dish</Button>
+              <Button onClick={() => openModal()} variant="secondary">Add First Menu</Button>
             ) : (
-              <p className="text-sm text-primary font-medium">Please create a category first to add dishes.</p>
+              <p className="text-sm text-primary font-medium">Please create a category first to add menus.</p>
             )}
           </CardContent>
         </Card>
@@ -396,7 +419,7 @@ export function MenuItemsPage() {
       <Modal 
         isOpen={isModalOpen} 
         onClose={() => setIsModalOpen(false)}
-        title={editingItem ? "Edit Dish" : "Add New Dish"}
+        title={editingItem ? "Edit Menu" : "Add New Menu"}
         className="max-w-xl"
       >
         <div className="mt-4">
@@ -422,7 +445,7 @@ export function MenuItemsPage() {
             {currentStep === 1 && (
               <div className="space-y-4 animate-fade-in">
                 <Input
-                  label="Dish Name *"
+                  label="Menu Name *"
                   value={formData.name}
                   onChange={(e) => setFormData({...formData, name: e.target.value})}
                   placeholder="e.g. Chicken Biryani"
@@ -521,32 +544,32 @@ export function MenuItemsPage() {
                   />
                 </div>
 
-                {editingItem && (
-                  <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 mt-4 text-sm">
-                    <div className="flex justify-between items-center mb-3">
-                      <span className="flex items-center font-medium text-slate-900 dark:text-white">
-                        <ImageIcon size={16} className="mr-2 text-slate-500"/> Product Images
-                      </span>
-                      {(!editingItem.images || editingItem.images.length < 4) ? (
-                        <label className="cursor-pointer text-xs font-medium bg-primary-50 text-primary-700 hover:bg-primary-100 dark:bg-primary-900/30 dark:text-primary-400 px-3 py-1.5 rounded-full transition-colors">
-                          Upload New
-                          <input 
-                            type="file" 
-                            accept="image/*"
-                            className="hidden"
-                            onChange={async (e) => {
+                <div className="p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 mt-4 text-sm">
+                  <div className="flex justify-between items-center mb-3">
+                    <span className="flex items-center font-medium text-slate-900 dark:text-white">
+                      <ImageIcon size={16} className="mr-2 text-slate-500"/> Product Images
+                    </span>
+                    {(!editingItem ? pendingImages.length : (editingItem.images?.length || 0)) < 4 ? (
+                      <label className="cursor-pointer text-xs font-medium bg-primary-50 text-primary-700 hover:bg-primary-100 dark:bg-primary-900/30 dark:text-primary-400 px-3 py-1.5 rounded-full transition-colors">
+                        Upload New
+                        <input 
+                          type="file" 
+                          accept="image/*"
+                          className="hidden"
+                          onChange={async (e) => {
+                            const file = e.target.files?.[0];
+                            if (!file) return;
+
+                            if (editingItem) {
                               if (editingItem.images && editingItem.images.length >= 4) {
                                 toast.error('Maximum 4 images allowed per item');
                                 return;
                               }
-                              const file = e.target.files?.[0];
-                              if (!file) return;
                               
                               const fd = new FormData();
                               fd.append('file', file);
                               fd.append('folder', 'items');
                               fd.append('item_id', editingItem.id);
-                              // Make primary only if it's the first image
                               fd.append('is_primary', (!editingItem.images || editingItem.images.length === 0) ? 'true' : 'false');
                               
                               try {
@@ -556,79 +579,113 @@ export function MenuItemsPage() {
                                 });
                                 toast.success('Image uploaded successfully', { id: toastId });
                                 fetchData();
-                                // Find the updated item from the backend and update editingItem
                                 const res = await api.get(`/menu-items/${editingItem.id}`);
                                 setEditingItem(res.data);
                               } catch (error: any) {
                                 toast.error(error.response?.data?.detail || 'Failed to upload image');
                               }
-                            }}
-                          />
-                        </label>
-                      ) : (
-                        <span className="text-xs font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-full">
-                          Limit Reached (4/4)
-                        </span>
-                      )}
-                    </div>
-                    
-                    {editingItem.images && editingItem.images.length > 0 ? (
-                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                        {editingItem.images.map(img => (
-                          <div key={img.id} className="w-full h-24 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 relative group">
-                            <img 
-                              src={img.image_url} 
-                              alt="" 
-                              className="w-full h-full object-cover cursor-pointer" 
-                              onClick={() => setLightboxImage(img.image_url)}
-                            />
-                            <div className="absolute inset-0 bg-black/40 lg:bg-black/60 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
-                              {!img.is_primary && (
-                                <button
-                                  type="button"
-                                  onClick={async () => {
-                                    try {
-                                      await api.put(`/menu-items/${editingItem.id}/images/${img.id}/primary`);
-                                      toast.success('Primary image updated');
-                                      const res = await api.get(`/menu-items/${editingItem.id}`);
-                                      setEditingItem(res.data);
-                                      fetchData();
-                                    } catch (err) {
-                                      toast.error('Failed to update primary image');
-                                    }
-                                  }}
-                                  className="p-1.5 bg-white/20 hover:bg-white/40 rounded text-white"
-                                  title="Set as Primary"
-                                >
-                                  <Star size={14} />
-                                </button>
-                              )}
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setImageToDelete({ itemId: editingItem.id, imageId: img.id });
-                                }}
-                                className="p-1.5 bg-red-500/80 hover:bg-red-500 rounded text-white"
-                                title="Delete Image"
-                              >
-                                <Trash2 size={14} />
-                              </button>
-                            </div>
-                            {img.is_primary && (
-                              <div className="absolute top-1 left-1 bg-primary text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow">
-                                Primary
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
+                            } else {
+                              if (pendingImages.length >= 4) {
+                                toast.error('Maximum 4 images allowed per item');
+                                return;
+                              }
+                              setPendingImages([...pendingImages, file]);
+                            }
+                          }}
+                        />
+                      </label>
                     ) : (
-                      <div className="text-center py-6 text-slate-400 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-lg">
-                        No images uploaded yet.
-                      </div>
+                      <span className="text-xs font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-full">
+                        Limit Reached (4/4)
+                      </span>
                     )}
                   </div>
-                )}
+                  
+                  {editingItem && editingItem.images && editingItem.images.length > 0 ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {editingItem.images.map(img => (
+                        <div key={img.id} className="w-full h-24 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 relative group">
+                          <img 
+                            src={img.image_url} 
+                            alt="" 
+                            className="w-full h-full object-cover cursor-pointer" 
+                            onClick={() => setLightboxImage(img.image_url)}
+                          />
+                          <div className="absolute inset-0 bg-black/40 lg:bg-black/60 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                            {!img.is_primary && (
+                              <button
+                                type="button"
+                                onClick={async () => {
+                                  try {
+                                    await api.put(`/menu-items/${editingItem.id}/images/${img.id}/primary`);
+                                    toast.success('Primary image updated');
+                                    const res = await api.get(`/menu-items/${editingItem.id}`);
+                                    setEditingItem(res.data);
+                                    fetchData();
+                                  } catch (err) {
+                                    toast.error('Failed to update primary image');
+                                  }
+                                }}
+                                className="p-1.5 bg-white/20 hover:bg-white/40 rounded text-white"
+                                title="Set as Primary"
+                              >
+                                <Star size={14} />
+                              </button>
+                            )}
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setImageToDelete({ itemId: editingItem.id, imageId: img.id });
+                              }}
+                              className="p-1.5 bg-red-500/80 hover:bg-red-500 rounded text-white"
+                              title="Delete Image"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                          {img.is_primary && (
+                            <div className="absolute top-1 left-1 bg-primary text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow">
+                              Primary
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (!editingItem && pendingImages.length > 0) ? (
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+                      {pendingImages.map((file, idx) => (
+                        <div key={idx} className="w-full h-24 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 relative group">
+                          <img 
+                            src={URL.createObjectURL(file)} 
+                            alt="" 
+                            className="w-full h-full object-cover" 
+                          />
+                          <div className="absolute inset-0 bg-black/40 lg:bg-black/60 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPendingImages(pendingImages.filter((_, i) => i !== idx));
+                              }}
+                              className="p-1.5 bg-red-500/80 hover:bg-red-500 rounded text-white"
+                              title="Delete Image"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                          {idx === 0 && (
+                            <div className="absolute top-1 left-1 bg-primary text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow">
+                              Primary
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div className="text-center py-6 text-slate-400 border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-lg">
+                      No images uploaded yet.
+                    </div>
+                  )}
+                </div>
               </div>
             )}
 
@@ -652,7 +709,7 @@ export function MenuItemsPage() {
                 </Button>
               ) : (
                 <Button type="submit" isLoading={isSubmitting}>
-                  Save Dish
+                  Save Menu
                 </Button>
               )}
             </div>
@@ -676,8 +733,8 @@ export function MenuItemsPage() {
         onClose={() => setItemToDelete(null)}
         onConfirm={confirmDeleteItem}
         title="Delete Menu Item"
-        message="Are you sure you want to delete this dish? This action cannot be undone."
-        confirmText="Delete Dish"
+        message="Are you sure you want to delete this menu? This action cannot be undone."
+        confirmText="Delete Menu"
         isLoading={isDeleting}
       />
 

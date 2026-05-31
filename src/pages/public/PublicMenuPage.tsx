@@ -903,7 +903,7 @@ export function PublicMenuPage() {
           <div className="pt-4 mt-4 border-t border-slate-200 flex flex-col items-center gap-1">
             <span className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Powered by</span>
             <a
-              href="https://menukit.debuggers.co.in"
+              href="https://menukit.debuggers.co.in/landing"
               target="_blank"
               rel="noopener noreferrer"
               className="text-xs font-extrabold bg-gradient-to-r from-orange-600 to-amber-500 bg-clip-text text-transparent hover:opacity-80 transition-opacity flex items-center gap-1"
@@ -1036,7 +1036,7 @@ export function PublicMenuPage() {
         <div className="max-w-3xl mx-auto flex items-center justify-center gap-2">
           <span className="text-[10px] text-slate-400 font-medium">Powered by</span>
           <a
-            href="https://menukit.debuggers.co.in"
+            href="https://menukit.debuggers.co.in/landing"
             target="_blank"
             rel="noopener noreferrer"
             className="text-xs font-bold bg-gradient-to-r from-orange-600 to-amber-500 bg-clip-text text-transparent hover:opacity-80 transition-opacity flex items-center gap-1"

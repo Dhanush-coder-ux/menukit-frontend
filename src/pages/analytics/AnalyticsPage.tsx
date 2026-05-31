@@ -4,12 +4,16 @@ import { api } from '@/services/api';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/Card';
 import { Skeleton } from '@/components/ui/Skeleton';
 import { SearchableSelect } from '@/components/ui/SearchableSelect';
+import { Modal } from '@/components/ui/Modal';
 
 export function AnalyticsPage() {
   const [data, setData] = useState<any>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [dateFilter, setDateFilter] = useState<number>(30);
   const [activeBar, setActiveBar] = useState<number | null>(null);
+  
+  const [viewAllModal, setViewAllModal] = useState<{isOpen: boolean, type: 'views' | 'searches' | null}>({isOpen: false, type: null});
+  const [modalSearch, setModalSearch] = useState('');
 
   useEffect(() => {
     const fetchAnalytics = async () => {
@@ -169,7 +173,7 @@ export function AnalyticsPage() {
           <CardContent>
             {data?.top_items?.length > 0 ? (
               <div className="space-y-4">
-                {data.top_items.map((item: any, i: number) => (
+                {data.top_items.slice(0, 5).map((item: any, i: number) => (
                   <div key={i} className="flex items-center justify-between">
                     <span className="font-medium text-sm">{item.name}</span>
                     <div className="flex items-center">
@@ -183,6 +187,14 @@ export function AnalyticsPage() {
                     </div>
                   </div>
                 ))}
+                {data.top_items.length > 5 && (
+                  <button 
+                    onClick={() => { setViewAllModal({isOpen: true, type: 'views'}); setModalSearch(''); }}
+                    className="w-full py-2 mt-2 text-sm font-medium text-slate-600 hover:text-slate-900 hover:bg-slate-100 dark:text-slate-400 dark:hover:text-slate-200 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                  >
+                    +{data.top_items.length - 5} more items
+                  </button>
+                )}
               </div>
             ) : (
               <p className="text-sm text-slate-500 py-4 text-center">No view data available yet.</p>
@@ -201,13 +213,13 @@ export function AnalyticsPage() {
           <CardContent>
             {data?.top_searches?.length > 0 ? (
               <div className="flex flex-wrap gap-2">
-                {data.top_searches.map((search: any, i: number) => {
+                {data.top_searches.slice(0, 5).map((search: any, i: number) => {
                   // Calculate size based on count relative to max
                   const maxCount = data.top_searches[0].count;
                   const ratio = search.count / maxCount;
-                  const sizeClass = ratio > 0.8 ? 'text-lg font-bold bg-primary-100 dark:bg-primary-900/40' 
-                                  : ratio > 0.4 ? 'text-base font-medium bg-slate-100 dark:bg-slate-800' 
-                                  : 'text-sm bg-slate-50 dark:bg-slate-800/50';
+                  const sizeClass = ratio > 0.8 ? 'text-sm font-semibold bg-primary-100 dark:bg-primary-900/40' 
+                                  : ratio > 0.4 ? 'text-xs font-medium bg-slate-100 dark:bg-slate-800' 
+                                  : 'text-[11px] bg-slate-50 dark:bg-slate-800/50';
                   
                   return (
                     <span key={i} className={`px-3 py-1.5 rounded-full text-slate-700 dark:text-slate-300 flex items-center gap-2 ${sizeClass}`}>
@@ -216,6 +228,14 @@ export function AnalyticsPage() {
                     </span>
                   );
                 })}
+                {data.top_searches.length > 5 && (
+                  <button
+                    onClick={() => { setViewAllModal({isOpen: true, type: 'searches'}); setModalSearch(''); }}
+                    className="px-3 py-1.5 rounded-full text-sm font-medium bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition-colors"
+                  >
+                    +{data.top_searches.length - 5} more
+                  </button>
+                )}
               </div>
             ) : (
               <p className="text-sm text-slate-500 py-4 text-center">No search data available yet.</p>
@@ -223,6 +243,81 @@ export function AnalyticsPage() {
           </CardContent>
         </Card>
       </div>
+
+      {/* View All Modal */}
+      <Modal
+        isOpen={viewAllModal.isOpen}
+        onClose={() => {
+          setViewAllModal({isOpen: false, type: null});
+          setModalSearch('');
+        }}
+        title={viewAllModal.type === 'views' ? 'All Viewed Items' : 'All Searches'}
+        className="max-w-xl bg-white dark:bg-slate-900 text-slate-900 dark:text-white"
+      >
+        <div className="mt-4">
+          <div className="relative mb-6">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+            <input
+              type="text"
+              placeholder="Search..."
+              value={modalSearch}
+              onChange={(e) => setModalSearch(e.target.value)}
+              className="w-full h-10 pl-9 pr-4 rounded-lg bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-primary text-sm transition-all"
+            />
+          </div>
+
+          <div className="max-h-[60vh] overflow-y-auto pr-2 space-y-4 custom-scrollbar">
+            {viewAllModal.type === 'views' && data?.top_items && (
+              data.top_items
+                .filter((item: any) => item.name.toLowerCase().includes(modalSearch.toLowerCase()))
+                .length > 0 ? (
+                  data.top_items
+                    .filter((item: any) => item.name.toLowerCase().includes(modalSearch.toLowerCase()))
+                    .map((item: any, i: number) => (
+                      <div key={i} className="flex items-center justify-between">
+                        <span className="font-medium text-sm">{item.name}</span>
+                        <div className="flex items-center">
+                          <div className="w-32 h-2 bg-slate-100 dark:bg-slate-800 rounded-full mr-3 overflow-hidden">
+                            <div 
+                              className="h-full bg-primary" 
+                              style={{ width: `${(item.count / data.top_items[0].count) * 100}%` }}
+                            ></div>
+                          </div>
+                          <span className="text-xs font-semibold w-8 text-right">{item.count}</span>
+                        </div>
+                      </div>
+                    ))
+                ) : (
+                  <p className="text-sm text-slate-500 py-4 text-center">No items match your search.</p>
+                )
+            )}
+
+            {viewAllModal.type === 'searches' && data?.top_searches && (
+              data.top_searches.filter((search: any) => search.term.toLowerCase().includes(modalSearch.toLowerCase())).length > 0 ? (
+                <div className="flex flex-wrap gap-2">
+                  {data.top_searches
+                    .filter((search: any) => search.term.toLowerCase().includes(modalSearch.toLowerCase()))
+                    .map((search: any, i: number) => {
+                      const maxCount = data.top_searches[0].count;
+                      const ratio = search.count / maxCount;
+                      const sizeClass = ratio > 0.8 ? 'text-sm font-semibold bg-primary-100 dark:bg-primary-900/40' 
+                                      : ratio > 0.4 ? 'text-xs font-medium bg-slate-100 dark:bg-slate-800' 
+                                      : 'text-[11px] bg-slate-50 dark:bg-slate-800/50';
+                      return (
+                        <span key={i} className={`px-3 py-1.5 rounded-full text-slate-700 dark:text-slate-300 flex items-center gap-2 ${sizeClass}`}>
+                          {search.term}
+                          <span className="text-[10px] opacity-60 bg-white/50 dark:bg-black/20 px-1.5 rounded-full">{search.count}</span>
+                        </span>
+                      );
+                    })}
+                </div>
+              ) : (
+                <p className="text-sm text-slate-500 py-4 text-center">No searches match your search.</p>
+              )
+            )}
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 }

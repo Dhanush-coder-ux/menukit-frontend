@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { toast } from 'react-hot-toast';
-import { Store, MapPin, Phone, UploadCloud, Save, Settings, ChevronRight, Check } from 'lucide-react';
+import { Store, MapPin, Phone, UploadCloud, Save, Settings, ChevronRight, Check, Edit2, Clock } from 'lucide-react';
 import { api } from '@/services/api';
 import { useShopStore } from '@/store/shopStore';
 
@@ -14,6 +14,16 @@ export function ShopSetupPage() {
   const { shop, setShop } = useShopStore();
   const [isLoading, setIsLoading] = useState(false);
   const [currentStep, setCurrentStep] = useState(1);
+  const [viewMode, setViewMode] = useState<'summary' | 'edit'>('edit');
+
+  const formatTime = (timeStr: string) => {
+    if (!timeStr) return '';
+    const [h, m] = timeStr.split(':');
+    const date = new Date();
+    date.setHours(parseInt(h, 10));
+    date.setMinutes(parseInt(m, 10));
+    return date.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit', hour12: true });
+  };
   
   const [formData, setFormData] = useState({
     name: '',
@@ -68,6 +78,7 @@ export function ShopSetupPage() {
               show_offers: loadedShop.settings.show_offers !== false
             });
           }
+          setViewMode('summary');
         }
       } catch (error) {
         // If 404, it means the shop doesn't exist yet, which is fine for a new user
@@ -175,6 +186,7 @@ export function ShopSetupPage() {
       // Update local store with combined data
       setShop({ ...res.data, settings: settingsRes.data });
       toast.success('Shop profile updated successfully!');
+      setViewMode('summary');
     } catch (error: any) {
       toast.error(error.response?.data?.detail || 'Failed to save shop details');
     } finally {
@@ -191,12 +203,80 @@ export function ShopSetupPage() {
 
   return (
     <div className="space-y-6 max-w-3xl mx-auto animate-fade-in pb-12">
-      <div>
-        <h2 className="text-2xl font-bold font-heading text-slate-900 dark:text-white">Shop Setup</h2>
-        <p className="text-slate-500">Configure your restaurant's digital presence</p>
+      <div className="flex justify-between items-end">
+        <div>
+          <h2 className="text-2xl font-bold font-heading text-slate-900 dark:text-white">Shop Setup</h2>
+          <p className="text-slate-500">Configure your restaurant's digital presence</p>
+        </div>
+        {viewMode === 'summary' && (
+          <button 
+            onClick={() => setViewMode('edit')} 
+            className="w-10 h-10 rounded-full bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 flex items-center justify-center text-slate-600 dark:text-slate-300 transition-colors shrink-0"
+            title="Edit Shop Details"
+          >
+            <Edit2 size={18} />
+          </button>
+        )}
       </div>
 
-      {/* Progress Stepper */}
+      {viewMode === 'summary' ? (
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-sm overflow-hidden animate-in fade-in slide-in-from-bottom-4 duration-500">
+          <div className="h-40 sm:h-48 w-full bg-slate-100 dark:bg-slate-800 relative">
+            {shop?.banner_url ? (
+              <img src={shop.banner_url} alt="Banner" className="w-full h-full object-cover" />
+            ) : (
+              <div className="w-full h-full flex items-center justify-center text-slate-400">
+                <Store size={48} className="opacity-20" />
+              </div>
+            )}
+            <div className="absolute -bottom-12 left-6 sm:left-8 p-1 bg-white dark:bg-slate-900 rounded-2xl">
+              <div className="w-24 h-24 rounded-xl overflow-hidden bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                {shop?.logo_url ? (
+                  <img src={shop.logo_url} alt="Logo" className="w-full h-full object-cover" />
+                ) : (
+                  <div className="w-full h-full flex items-center justify-center text-slate-400">
+                    <Store size={32} />
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+          
+          <div className="pt-16 pb-6 px-6 sm:px-8">
+            <h3 className="text-2xl font-bold text-slate-900 dark:text-white mb-2">{shop?.name}</h3>
+            <p className="text-slate-600 dark:text-slate-400 mb-6">{shop?.description || 'No description provided.'}</p>
+            
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-8 text-sm">
+              <div className="flex items-start gap-3">
+                <MapPin className="text-slate-400 shrink-0 mt-0.5" size={18} />
+                <span className="text-slate-700 dark:text-slate-300">{shop?.address || 'No address set'}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <Phone className="text-slate-400 shrink-0" size={18} />
+                <span className="text-slate-700 dark:text-slate-300">{shop?.phone || 'No phone set'}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <span className="text-green-500 font-bold shrink-0 text-center w-[18px]">W</span>
+                <span className="text-slate-700 dark:text-slate-300">{shop?.whatsapp || 'No WhatsApp set'}</span>
+              </div>
+              <div className="flex items-center gap-3">
+                <Clock className="text-slate-400 shrink-0" size={18} />
+                <span className="text-slate-700 dark:text-slate-300">
+                  {shop?.opening_time ? formatTime(shop.opening_time) : '--:--'} to {shop?.closing_time ? formatTime(shop.closing_time) : '--:--'}
+                </span>
+              </div>
+            </div>
+            
+            {shop?.welcome_message && (
+              <div className="mt-6 p-4 bg-slate-50 dark:bg-slate-800/50 rounded-xl text-sm italic text-slate-600 dark:text-slate-400 border border-slate-100 dark:border-slate-800">
+                "{shop.welcome_message}"
+              </div>
+            )}
+          </div>
+        </div>
+      ) : (
+        <>
+          {/* Progress Stepper */}
       <div className="flex items-center justify-between mb-8 relative">
         <div className="absolute left-0 top-1/2 -translate-y-1/2 w-full h-1 bg-slate-100 dark:bg-slate-800 rounded-full -z-10"></div>
         <div 
@@ -464,10 +544,15 @@ export function ShopSetupPage() {
           <Button 
             type="button" 
             variant="secondary" 
-            onClick={() => setCurrentStep(prev => prev - 1)}
-            disabled={currentStep === 1}
+            onClick={() => {
+              if (currentStep > 1) {
+                setCurrentStep(prev => prev - 1);
+              } else if (shop?.id) {
+                setViewMode('summary');
+              }
+            }}
           >
-            Back
+            {currentStep === 1 && shop?.id ? 'Cancel' : 'Back'}
           </Button>
           
           {currentStep < 4 ? (
@@ -483,6 +568,8 @@ export function ShopSetupPage() {
           )}
         </div>
       </form>
+      </>
+      )}
     </div>
   );
 }
