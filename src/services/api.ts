@@ -4,7 +4,7 @@ import axios from 'axios';
 // https://api.menukit.debuggers.co.in
 // http://127.0.0.1:8000
 
-const BASE_URL="http://127.0.0.1:8000"
+const BASE_URL="http://127.0.0.1:8001"
 // const BASE_URL="https://api.menukit.debuggers.co.in"
 
 export const api = axios.create({

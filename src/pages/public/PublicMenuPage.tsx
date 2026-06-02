@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router';
-import { Search, Flame, MapPin, Phone, Info, UtensilsCrossed, X, Star, LayoutGrid, List as ListIcon, Clock, Sparkles, ExternalLink, SlidersHorizontal, Check, Languages } from 'lucide-react';
+import { Search, Flame, MapPin, Phone, Info, UtensilsCrossed, X, Star, LayoutGrid, List as ListIcon, Clock, Sparkles, ExternalLink, SlidersHorizontal, Check, Languages, Tag } from 'lucide-react';
 import { api } from '@/services/api';
 import { Shop, Category, MenuItem, Discount } from '@/types';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -60,6 +60,7 @@ export function PublicMenuPage() {
   const [activeDiscounts, setActiveDiscounts] = useState<Discount[]>([]);
   const [selectedDiscountForModal, setSelectedDiscountForModal] = useState<Discount | null>(null);
   const [activeDiscountFilter, setActiveDiscountFilter] = useState<string | null>(null);
+  const [isDiscountsModalOpen, setIsDiscountsModalOpen] = useState(false);
 
   // Track scan if referrer is present
   useEffect(() => {
@@ -463,6 +464,21 @@ export function PublicMenuPage() {
                 </button>
               </div>
 
+              {/* Active Offers Label */}
+              {activeDiscounts.length > 0 && (
+                <button
+                  onClick={() => setIsDiscountsModalOpen(true)}
+                  className="p-1.5 rounded-lg flex items-center justify-center shrink-0 transition-colors relative"
+                  style={{ backgroundColor: `${primaryColor}15`, color: primaryColor }}
+                  title="Active Offers"
+                >
+                  <Tag size={18} />
+                  <span className="absolute -top-1.5 -right-1.5 w-4 h-4 bg-red-500 text-white text-[9px] font-bold rounded-full flex items-center justify-center shadow-sm border border-white">
+                    {activeDiscounts.length}
+                  </span>
+                </button>
+              )}
+
               {/* View Toggle */}
               <div className="flex bg-slate-100 rounded-lg p-1 shrink-0 items-center">
                 <button
@@ -730,52 +746,63 @@ export function PublicMenuPage() {
                 <div
                   key={disc.id}
                   onClick={() => setSelectedDiscountForModal(disc)}
-                  className="relative shrink-0 w-[85%] sm:w-[380px] overflow-hidden rounded-2xl px-4 py-3.5 flex items-center gap-4 shadow-sm snap-center cursor-pointer transition-all hover:scale-[1.03] active:scale-95 group"
-                  style={{
-                    backgroundColor: `${primaryColor}10`,
-                    borderLeft: `4px solid ${primaryColor}`,
-                    borderTop: `1px solid ${primaryColor}20`,
-                    borderRight: `1px solid ${primaryColor}20`,
-                    borderBottom: `1px solid ${primaryColor}20`,
-                  }}
+                  className="relative shrink-0 w-[85%] sm:w-[350px] flex shadow-md rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1 active:scale-[0.98] snap-center group bg-white"
+                  style={{ border: `1px solid ${primaryColor}30` }}
                 >
-                  <div className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity bg-white z-0 pointer-events-none" />
-                  {/* Subtle Shimmer/Glow effect */}
-                  <div className="absolute top-0 left-1/2 w-full h-full bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-1/2 skew-x-12 opacity-0 group-hover:opacity-100 group-hover:animate-shimmer pointer-events-none transition-opacity duration-300 z-0" />
-                  
-                  {/* Badge */}
-                  <div
-                    className="w-14 h-14 rounded-2xl flex items-center justify-center shrink-0 text-white font-bold shadow-md z-10"
-                    style={{ 
-                      backgroundColor: primaryColor,
-                      boxShadow: `0 4px 12px ${primaryColor}40`
-                    }}
+                  {/* Left Ticket Stub */}
+                  <div 
+                    className="relative w-28 sm:w-32 flex flex-col items-center justify-center text-white p-4 shrink-0"
+                    style={{ backgroundColor: primaryColor }}
                   >
-                    {disc.discount_type === 'percentage' ? (
-                      <span className="text-sm sm:text-base tracking-tight">{Number(disc.discount_value)}%</span>
-                    ) : (
-                      <span className="text-sm sm:text-base tracking-tight">₹{Number(disc.discount_value)}</span>
-                    )}
+                    {/* Cutouts for ticket effect */}
+                    <div className="absolute -top-3 -right-3 w-6 h-6 bg-slate-50 rounded-full border-b border-l border-transparent" style={{ borderColor: `${primaryColor}30` }} />
+                    <div className="absolute -bottom-3 -right-3 w-6 h-6 bg-slate-50 rounded-full border-t border-l border-transparent" style={{ borderColor: `${primaryColor}30` }} />
+                    
+                    <div className="text-2xl sm:text-3xl font-black tracking-tight drop-shadow-md text-center">
+                      {disc.discount_type === 'percentage' && `${Number(disc.discount_value)}%`}
+                      {disc.discount_type === 'flat' && `${settings?.currency || '₹'}${Number(disc.discount_value)}`}
+                      {disc.discount_type === 'bogo' && 'BOGO'}
+                      {disc.discount_type === 'combo' && 'COMBO'}
+                    </div>
+                    <div className="text-[10px] sm:text-xs font-bold uppercase tracking-widest mt-0.5 opacity-90 text-center">
+                      {['percentage', 'flat'].includes(disc.discount_type) && 'Off'}
+                      {disc.discount_type === 'bogo' && `Buy ${disc.buy_quantity} Get ${disc.get_quantity}`}
+                      {disc.discount_type === 'combo' && `${settings?.currency || '₹'}${Number(disc.discount_value)}`}
+                    </div>
                   </div>
-                  
-                  {/* Content */}
-                  <div className="flex-1 min-w-0 z-10 py-1">
-                    <p className="font-bold text-sm sm:text-base mb-1 truncate" style={{ color: primaryColor }}>
-                      {disc.title}
-                    </p>
+
+                  {/* Perforated line */}
+                  <div className="relative border-l-2 border-dashed border-slate-200 my-4" />
+
+                  {/* Right Ticket Body */}
+                  <div className="flex-1 p-4 sm:p-5 flex flex-col justify-center relative bg-white overflow-hidden min-w-0">
+                    <div className="flex justify-between items-start mb-1.5 gap-2">
+                      <h3 className="font-extrabold text-slate-800 text-sm sm:text-base leading-tight truncate">
+                        {disc.title}
+                      </h3>
+                      <Sparkles size={16} className="shrink-0 animate-pulse" style={{ color: primaryColor }} />
+                    </div>
+                    
                     {disc.description && (
-                      <p className="text-xs text-slate-600 line-clamp-1">{disc.description}</p>
+                      <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed mb-3 font-medium">
+                        {disc.description}
+                      </p>
                     )}
-                  </div>
-                  
-                  {/* Button */}
-                  <div className="shrink-0 z-10">
-                    <span
-                      className="inline-block text-[10px] sm:text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-full text-white shadow-sm group-hover:animate-pulse"
-                      style={{ backgroundColor: primaryColor }}
-                    >
-                      Limited Offer
-                    </span>
+                    
+                    <div className="mt-auto flex items-center justify-between">
+                      <span 
+                        className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md shadow-sm shrink-0"
+                        style={{ color: primaryColor, backgroundColor: `${primaryColor}15` }}
+                      >
+                        Limited Offer
+                      </span>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 group-hover:text-slate-600 transition-colors flex items-center gap-1 shrink-0 ml-2">
+                        Tap to use
+                      </span>
+                    </div>
+
+                    {/* Shimmer effect on hover */}
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-slate-50 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-300" />
                   </div>
                 </div>
               ))}
@@ -925,6 +952,7 @@ export function PublicMenuPage() {
                                 const basePrice = Number(item.offer_price || item.price);
                                 if (!item.offer_price && activeDiscounts.length > 0) {
                                   const disc = activeDiscounts.find(d => {
+                                    if (d.discount_type === 'bogo' || d.discount_type === 'combo') return false;
                                     if (d.applies_to === 'all') return true;
                                     if (d.applies_to === 'category' && d.target_ids?.includes(item.category_id)) return true;
                                     if (d.applies_to === 'items' && d.target_ids?.includes(item.id)) return true;
@@ -1191,11 +1219,10 @@ export function PublicMenuPage() {
                 }}
               >
                 <div className="absolute inset-0 bg-white/20 rounded-[2rem] -skew-x-12 opacity-50" />
-                {selectedDiscountForModal.discount_type === 'percentage' ? (
-                  <span className="text-3xl tracking-tight z-10">{Number(selectedDiscountForModal.discount_value)}%</span>
-                ) : (
-                  <span className="text-3xl tracking-tight z-10">₹{Number(selectedDiscountForModal.discount_value)}</span>
-                )}
+                {selectedDiscountForModal.discount_type === 'percentage' && <span className="text-3xl tracking-tight z-10">{Number(selectedDiscountForModal.discount_value)}%</span>}
+                {selectedDiscountForModal.discount_type === 'flat' && <span className="text-3xl tracking-tight z-10">{settings?.currency || '₹'}{Number(selectedDiscountForModal.discount_value)}</span>}
+                {selectedDiscountForModal.discount_type === 'bogo' && <span className="text-3xl tracking-tight z-10 text-center text-2xl px-2">Buy {selectedDiscountForModal.buy_quantity} Get {selectedDiscountForModal.get_quantity}</span>}
+                {selectedDiscountForModal.discount_type === 'combo' && <span className="text-3xl tracking-tight z-10">{settings?.currency || '₹'}{Number(selectedDiscountForModal.discount_value)}</span>}
               </div>
               <h3 className="text-2xl font-bold font-heading text-slate-900">{selectedDiscountForModal.title}</h3>
               {selectedDiscountForModal.description && (
@@ -1263,6 +1290,87 @@ export function PublicMenuPage() {
             </div>
           </div>
         )}
+      </Modal>
+
+      {/* All Discounts Modal */}
+      <Modal
+        isOpen={isDiscountsModalOpen}
+        onClose={() => setIsDiscountsModalOpen(false)}
+        title="Active Offers"
+        className="bg-white text-slate-900 max-w-md"
+      >
+        <div className="space-y-4 mt-4 max-h-[60vh] overflow-y-auto scrollbar-hide">
+          {activeDiscounts.length === 0 ? (
+            <p className="text-slate-500 text-sm text-center py-8">No active offers at the moment.</p>
+          ) : (
+            activeDiscounts.map(disc => (
+              <div
+                key={disc.id}
+                onClick={() => {
+                  setIsDiscountsModalOpen(false);
+                  setSelectedDiscountForModal(disc);
+                }}
+                className="relative w-full flex shadow-sm rounded-xl overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-md active:scale-[0.98] group bg-white"
+                style={{ border: `1px solid ${primaryColor}30` }}
+              >
+                {/* Left Ticket Stub */}
+                <div 
+                  className="relative w-24 flex flex-col items-center justify-center text-white p-3 shrink-0"
+                  style={{ backgroundColor: primaryColor }}
+                >
+                  {/* Cutouts for ticket effect */}
+                  <div className="absolute -top-3 -right-3 w-6 h-6 bg-white rounded-full border-b border-l border-transparent z-10" style={{ borderColor: `${primaryColor}30` }} />
+                  <div className="absolute -bottom-3 -right-3 w-6 h-6 bg-white rounded-full border-t border-l border-transparent z-10" style={{ borderColor: `${primaryColor}30` }} />
+                  
+                  <div className="text-xl font-black tracking-tight drop-shadow-sm text-center">
+                    {disc.discount_type === 'percentage' && `${Number(disc.discount_value)}%`}
+                    {disc.discount_type === 'flat' && `${settings?.currency || '₹'}${Number(disc.discount_value)}`}
+                    {disc.discount_type === 'bogo' && 'BOGO'}
+                    {disc.discount_type === 'combo' && 'COMBO'}
+                  </div>
+                  <div className="text-[9px] font-bold uppercase tracking-widest mt-0.5 opacity-90 text-center">
+                    {['percentage', 'flat'].includes(disc.discount_type) && 'Off'}
+                    {disc.discount_type === 'bogo' && `Buy ${disc.buy_quantity} Get ${disc.get_quantity}`}
+                    {disc.discount_type === 'combo' && `${settings?.currency || '₹'}${Number(disc.discount_value)}`}
+                  </div>
+                </div>
+
+                {/* Perforated line */}
+                <div className="relative border-l-2 border-dashed border-slate-100 my-3" />
+
+                {/* Right Ticket Body */}
+                <div className="flex-1 p-3 flex flex-col justify-center relative bg-white overflow-hidden min-w-0">
+                  <div className="flex justify-between items-start mb-1 gap-2">
+                    <p className="font-extrabold text-slate-800 text-sm leading-tight truncate">
+                      {disc.title}
+                    </p>
+                  </div>
+                  
+                  {disc.description && (
+                    <p className="text-[11px] text-slate-500 line-clamp-1 leading-relaxed mb-2 font-medium">
+                      {disc.description}
+                    </p>
+                  )}
+                  
+                  <div className="mt-auto flex items-center justify-between">
+                    <span 
+                      className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded shadow-sm shrink-0"
+                      style={{ color: primaryColor, backgroundColor: `${primaryColor}15` }}
+                    >
+                      Limited Offer
+                    </span>
+                    <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 group-hover:text-slate-600 transition-colors ml-2 shrink-0">
+                      View
+                    </span>
+                  </div>
+
+                  {/* Shimmer effect on hover */}
+                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-slate-50 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-300" />
+                </div>
+              </div>
+            ))
+          )}
+        </div>
       </Modal>
 
       <LanguageSelectorModal

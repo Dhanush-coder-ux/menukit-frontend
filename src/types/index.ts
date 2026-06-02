@@ -132,8 +132,11 @@ export interface Discount {
   shop_id: string;
   title: string;
   description: string | null;
-  discount_type: 'percentage' | 'flat';
-  discount_value: string;
+  discount_type: 'percentage' | 'flat' | 'bogo' | 'combo';
+  discount_value: string | null;
+  buy_quantity?: number | null;
+  get_quantity?: number | null;
+  reward_target_ids?: string[] | null;
   applies_to: 'all' | 'category' | 'items';
   target_ids: string[] | null;
   start_date: string | null;
