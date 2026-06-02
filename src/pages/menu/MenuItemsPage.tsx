@@ -1,5 +1,4 @@
 import { useState, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { toast } from 'react-hot-toast';
 import { Plus, Edit2, Trash2, Search, Filter, Image as ImageIcon, Star, Flame, LayoutGrid, List, Sparkles, Wand2, Loader2, MessageSquare } from 'lucide-react';
 import { api } from '@/services/api';
@@ -23,6 +22,7 @@ export function MenuItemsPage() {
   // Filters
   const [activeTab, setActiveTab] = useState<string>('all');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isFabOpen, setIsFabOpen] = useState(false);
   
   // Modal state
   const [isModalOpen, setIsModalOpen] = useState(false);
@@ -40,6 +40,8 @@ export function MenuItemsPage() {
   const [isLoadingReviews, setIsLoadingReviews] = useState(false);
   
   const [pendingImages, setPendingImages] = useState<File[]>([]);
+  const [searchImagesModal, setSearchImagesModal] = useState<{ item: MenuItem, urls: string[] } | null>(null);
+  const [isSavingVariant, setIsSavingVariant] = useState(false);
   
   const defaultForm = {
     category_id: '',
@@ -90,24 +92,51 @@ export function MenuItemsPage() {
     }
   };
 
-  const handleAutoImage = async (item: MenuItem) => {
+  const handleSearchImages = async (item: MenuItem) => {
     if (autoImageLoadingId) return;
     setAutoImageLoadingId(item.id);
     try {
-      const res = await api.post(`/menu-items/${item.id}/auto-image`);
-      const newImage = res.data;
-      // Update local state so the image appears immediately
-      setMenuItems(menuItems.map(m =>
-        m.id === item.id
-          ? { ...m, image_url: newImage.image_url, thumbnail_url: newImage.thumbnail_url }
-          : m
-      ));
-      toast.success('Image found and saved!');
+      const res = await api.get(`/menu-items/${item.id}/search-images`);
+      const urls = res.data.urls || [];
+      if (urls.length === 0) {
+        toast.error('No images found for this item.');
+      } else {
+        setSearchImagesModal({ item, urls });
+      }
     } catch (err: any) {
       const msg = err?.response?.data?.detail || 'Could not find an image. Try again.';
       toast.error(msg);
     } finally {
       setAutoImageLoadingId(null);
+    }
+  };
+
+  const handleSaveImageVariant = async (url: string) => {
+    if (!searchImagesModal) return;
+    setIsSavingVariant(true);
+    try {
+      const res = await api.post(`/menu-items/${searchImagesModal.item.id}/save-image-url`, { url });
+      const newImage = res.data;
+      
+      // Update local state so the image appears immediately
+      setMenuItems(menuItems.map(m => {
+        if (m.id === searchImagesModal.item.id) {
+          const updatedImages = [...(m.images || []), newImage];
+          return { 
+            ...m, 
+            image_url: newImage.image_url, 
+            thumbnail_url: newImage.thumbnail_url,
+            images: updatedImages 
+          };
+        }
+        return m;
+      }));
+      toast.success('Image saved successfully!');
+      setSearchImagesModal(null);
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || 'Failed to save image.');
+    } finally {
+      setIsSavingVariant(false);
     }
   };
 
@@ -261,20 +290,6 @@ export function MenuItemsPage() {
           <h2 className="text-2xl font-bold font-heading">Menu Items</h2>
           <p className="text-slate-500">Add and manage your menus.</p>
         </div>
-        <div className="flex items-center gap-2 w-full sm:w-auto">
-          <Button 
-            variant="outline" 
-            className="flex-1 sm:flex-none border-primary text-primary hover:bg-primary-50 dark:hover:bg-primary-900/30"
-            onClick={() => window.location.href = '/bulk-upload'}
-          >
-            <Sparkles size={18} className="mr-2 text-amber-500" />
-            AI Bulk Upload
-          </Button>
-          <Button onClick={() => openModal()} className="flex-1 sm:flex-none shadow-md shadow-primary/25">
-            <Plus size={18} className="mr-2" />
-            Add Menu
-          </Button>
-        </div>
       </div>
 
       {/* Filters & Tabs */}
@@ -364,17 +379,34 @@ export function MenuItemsPage() {
               <Card key={item.id} className={`flex ${viewMode === 'grid' ? 'flex-col' : 'flex-row'} overflow-hidden transition-all hover:shadow-md ${!item.is_available ? 'opacity-70 grayscale-[30%]' : ''}`}>
                 <div className={`${viewMode === 'grid' ? 'h-32' : 'w-32 sm:w-40 shrink-0'} bg-slate-100 dark:bg-slate-800 relative`}>
                   {item.image_url ? (
-                    <img 
-                      src={item.image_url} 
-                      alt={item.name} 
-                      className="w-full h-full object-cover cursor-pointer"
-                      onClick={() => setLightboxImage(item.image_url!)}
-                    />
+                    <div className="relative w-full h-full group/img">
+                      <img 
+                        src={item.image_url} 
+                        alt={item.name} 
+                        className="w-full h-full object-cover cursor-pointer"
+                        onClick={() => setLightboxImage(item.image_url!)}
+                      />
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          const primaryImg = item.images?.find(i => i.is_primary) || item.images?.[0];
+                          if (primaryImg) {
+                            setImageToDelete({ itemId: item.id, imageId: primaryImg.id });
+                          } else {
+                            toast.error('Cannot delete this image.');
+                          }
+                        }}
+                        className="absolute inset-0 m-auto w-10 h-10 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover/img:opacity-100 transition-opacity duration-200 shadow-lg shadow-red-900/20"
+                        title="Delete Image"
+                      >
+                        <Trash2 size={18} />
+                      </button>
+                    </div>
                   ) : (
                     <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-slate-50 dark:bg-slate-900 text-slate-300 group">
                       <ImageIcon size={24} className="group-hover:opacity-0 transition-opacity duration-200" />
                       <button
-                        onClick={() => handleAutoImage(item)}
+                        onClick={() => handleSearchImages(item)}
                         disabled={autoImageLoadingId === item.id}
                         className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-200 bg-gradient-to-br from-primary/90 to-primary/70 text-white rounded-sm"
                         title="Auto-find an image for this item"
@@ -988,17 +1020,6 @@ export function MenuItemsPage() {
           </form>
         </div>
       </Modal>
-      
-      {/* FAB for Add Dish */}
-      {!isModalOpen && createPortal(
-        <button
-          onClick={() => openModal()}
-          className="fixed bottom-20 lg:bottom-8 right-4 lg:right-8 z-50 w-14 h-14 rounded-full bg-primary hover:bg-primary-600 hover:scale-105 shadow-[0_8px_30px_rgb(0,0,0,0.12)] flex items-center justify-center text-white transition-all duration-200"
-        >
-          <Plus size={24} />
-        </button>,
-        document.body
-      )}
 
       <ConfirmModal
         isOpen={!!itemToDelete}
@@ -1127,6 +1148,102 @@ export function MenuItemsPage() {
           ) : null}
         </div>
       </Modal>
+
+      {/* Search Images Modal */}
+      <Modal
+        isOpen={!!searchImagesModal}
+        onClose={() => !isSavingVariant && setSearchImagesModal(null)}
+        title="Select an Image"
+        className="max-w-2xl"
+      >
+        <div className="mt-4">
+          <p className="text-sm text-slate-500 mb-4">
+            Select the best image for <strong className="text-slate-900 dark:text-white">{searchImagesModal?.item.name}</strong>.
+          </p>
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 max-h-[60vh] overflow-y-auto p-1 custom-scrollbar">
+            {searchImagesModal?.urls.map((url, idx) => (
+              <div 
+                key={idx} 
+                className="relative aspect-square rounded-xl overflow-hidden cursor-pointer group bg-slate-100 dark:bg-slate-800"
+                onClick={() => handleSaveImageVariant(url)}
+              >
+                <img 
+                  src={url} 
+                  alt="Variant" 
+                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
+                />
+                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
+                  <div className="bg-primary text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform scale-75 group-hover:scale-100 shadow-xl shadow-primary/30">
+                    <Plus size={20} />
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+          
+          {isSavingVariant && (
+            <div className="absolute inset-0 bg-white/50 dark:bg-slate-950/50 backdrop-blur-sm flex flex-col items-center justify-center rounded-xl z-10">
+              <Loader2 size={32} className="animate-spin text-primary mb-3" />
+              <p className="text-sm font-medium text-slate-900 dark:text-white shadow-sm">Downloading & Saving...</p>
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      {/* FIXED FAB */}
+      <div className="fixed bottom-20 lg:bottom-8 right-4 lg:right-8 z-50 flex flex-col items-end gap-3">
+        {/* Expanded Actions */}
+        <div
+          className={`flex flex-col items-end gap-3 transition-all duration-300 ${
+            isFabOpen
+              ? 'opacity-100 translate-y-0 scale-100'
+              : 'opacity-0 translate-y-4 scale-95 pointer-events-none'
+          }`}
+        >
+          <div className="flex items-center gap-3">
+            <span className="bg-white dark:bg-slate-800 px-3 py-2 rounded-lg shadow text-xs font-medium">
+              AI Bulk Upload
+            </span>
+
+            <button
+              onClick={() => {
+                setIsFabOpen(false);
+                window.location.href = '/bulk-upload';
+              }}
+              className="w-12 h-12 rounded-full bg-white dark:bg-slate-800 shadow-lg flex items-center justify-center hover:scale-105 transition-transform text-amber-500"
+            >
+              <Sparkles size={20} />
+            </button>
+          </div>
+
+          <div className="flex items-center gap-3">
+            <span className="bg-white dark:bg-slate-800 px-3 py-2 rounded-lg shadow text-xs font-medium">
+              Add Menu
+            </span>
+
+            <button
+              onClick={() => {
+                setIsFabOpen(false);
+                openModal();
+              }}
+              className="w-12 h-12 rounded-full bg-primary shadow-lg flex items-center justify-center hover:scale-105 transition-transform text-white"
+            >
+              <Plus size={24} />
+            </button>
+          </div>
+        </div>
+
+        {/* Main FAB */}
+        <button
+          onClick={() => setIsFabOpen(!isFabOpen)}
+          className={`w-14 h-14 rounded-full shadow-lg flex items-center justify-center text-white transition-all duration-300 ${
+            isFabOpen ? 'bg-slate-800 rotate-45' : 'bg-primary hover:bg-primary-600 hover:scale-105'
+          }`}
+        >
+          <Plus size={24} />
+        </button>
+      </div>
     </div>
   );
 }

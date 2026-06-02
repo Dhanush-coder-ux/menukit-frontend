@@ -58,6 +58,8 @@ export function PublicMenuPage() {
   const [showWelcome, setShowWelcome] = useState(false);
   const [welcomePhase, setWelcomePhase] = useState<'entering' | 'visible' | 'exiting' | 'hidden'>('hidden');
   const [activeDiscounts, setActiveDiscounts] = useState<Discount[]>([]);
+  const [selectedDiscountForModal, setSelectedDiscountForModal] = useState<Discount | null>(null);
+  const [activeDiscountFilter, setActiveDiscountFilter] = useState<string | null>(null);
 
   // Track scan if referrer is present
   useEffect(() => {
@@ -171,7 +173,18 @@ export function PublicMenuPage() {
         if (extraFilters.includes('in_stock') && !item.is_available) matchesExtra = false;
         if (extraFilters.includes('out_of_stock') && item.is_available) matchesExtra = false;
 
-        return matchesSearch && matchesFood && matchesExtra;
+        let matchesDiscount = true;
+        if (activeDiscountFilter) {
+          const disc = activeDiscounts.find(d => d.id === activeDiscountFilter);
+          if (disc) {
+            if (disc.applies_to === 'all') matchesDiscount = true;
+            else if (disc.applies_to === 'category' && disc.target_ids?.includes(item.category_id)) matchesDiscount = true;
+            else if (disc.applies_to === 'items' && disc.target_ids?.includes(item.id)) matchesDiscount = true;
+            else matchesDiscount = false;
+          }
+        }
+
+        return matchesSearch && matchesFood && matchesExtra && matchesDiscount;
       });
 
       // Sort
@@ -193,7 +206,7 @@ export function PublicMenuPage() {
         items: filteredItems
       };
     }).filter(cat => cat.items.length > 0 && (activeCategoryId === 'all' || cat.id === activeCategoryId));
-  }, [categories, searchQuery, activeCategoryId, foodFilter, sortOrder, extraFilters]);
+  }, [categories, searchQuery, activeCategoryId, foodFilter, sortOrder, extraFilters, activeDiscountFilter, activeDiscounts]);
 
   const toggleExtraFilter = (filter: string) => {
     setExtraFilters(prev => 
@@ -646,7 +659,7 @@ export function PublicMenuPage() {
         </div>
 
         {/* Active filter indicators */}
-        {(foodFilter !== 'all' || sortOrder !== 'default' || extraFilters.length > 0) && (
+        {(foodFilter !== 'all' || sortOrder !== 'default' || extraFilters.length > 0 || activeDiscountFilter) && (
           <div className="flex flex-wrap items-center gap-2 mb-4">
             {foodFilter !== 'all' && (
               <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full ${
@@ -685,12 +698,21 @@ export function PublicMenuPage() {
                 </button>
               </span>
             ))}
-            {(foodFilter !== 'all' || sortOrder !== 'default' || extraFilters.length > 0) && (
+            {activeDiscountFilter && (
+              <span className="inline-flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-full bg-purple-50 text-purple-700 ring-1 ring-purple-200 shadow-sm animate-pulse-slow">
+                <Sparkles size={12} className="text-purple-500" /> Offer Applied
+                <button onClick={() => setActiveDiscountFilter(null)} className="ml-1 opacity-60 hover:opacity-100">
+                  <X size={12} />
+                </button>
+              </span>
+            )}
+            {(foodFilter !== 'all' || sortOrder !== 'default' || extraFilters.length > 0 || activeDiscountFilter) && (
               <button 
                 onClick={() => {
                   setFoodFilter('all');
                   setSortOrder('default');
                   setExtraFilters([]);
+                  setActiveDiscountFilter(null);
                 }}
                 className="text-xs text-slate-500 hover:text-slate-900 underline underline-offset-2 ml-1 font-medium transition-colors"
               >
@@ -707,7 +729,8 @@ export function PublicMenuPage() {
               {activeDiscounts.map(disc => (
                 <div
                   key={disc.id}
-                  className="relative shrink-0 w-[85%] sm:w-[380px] overflow-hidden rounded-2xl px-4 py-3.5 flex items-center gap-4 shadow-sm snap-center transition-transform hover:scale-[1.02]"
+                  onClick={() => setSelectedDiscountForModal(disc)}
+                  className="relative shrink-0 w-[85%] sm:w-[380px] overflow-hidden rounded-2xl px-4 py-3.5 flex items-center gap-4 shadow-sm snap-center cursor-pointer transition-all hover:scale-[1.03] active:scale-95 group"
                   style={{
                     backgroundColor: `${primaryColor}10`,
                     borderLeft: `4px solid ${primaryColor}`,
@@ -716,8 +739,9 @@ export function PublicMenuPage() {
                     borderBottom: `1px solid ${primaryColor}20`,
                   }}
                 >
+                  <div className="absolute inset-0 opacity-0 group-hover:opacity-10 transition-opacity bg-white z-0 pointer-events-none" />
                   {/* Subtle Shimmer/Glow effect */}
-                  <div className="absolute top-0 left-1/2 w-full h-full bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-1/2 skew-x-12 opacity-0 hover:opacity-100 hover:animate-shimmer pointer-events-none transition-opacity duration-300" />
+                  <div className="absolute top-0 left-1/2 w-full h-full bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-1/2 skew-x-12 opacity-0 group-hover:opacity-100 group-hover:animate-shimmer pointer-events-none transition-opacity duration-300 z-0" />
                   
                   {/* Badge */}
                   <div
@@ -747,7 +771,7 @@ export function PublicMenuPage() {
                   {/* Button */}
                   <div className="shrink-0 z-10">
                     <span
-                      className="inline-block text-[10px] sm:text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-full text-white shadow-sm"
+                      className="inline-block text-[10px] sm:text-xs font-bold uppercase tracking-wider px-3 py-1.5 rounded-full text-white shadow-sm group-hover:animate-pulse"
                       style={{ backgroundColor: primaryColor }}
                     >
                       Limited Offer
@@ -1148,6 +1172,98 @@ export function PublicMenuPage() {
           </a>
         </div>
       </div>
+
+      {/* Offer Details Modal */}
+      <Modal
+        isOpen={!!selectedDiscountForModal}
+        onClose={() => setSelectedDiscountForModal(null)}
+        title="Offer Details"
+        className="bg-white text-slate-900"
+      >
+        {selectedDiscountForModal && (
+          <div className="space-y-5 mt-2">
+            <div className="flex flex-col items-center text-center pb-5 border-b border-slate-100">
+              <div 
+                className="w-24 h-24 rounded-[2rem] flex items-center justify-center shrink-0 text-white font-bold mb-4 transform hover:scale-105 transition-transform duration-300 relative"
+                style={{ 
+                  backgroundColor: primaryColor,
+                  boxShadow: `0 12px 32px ${primaryColor}60`
+                }}
+              >
+                <div className="absolute inset-0 bg-white/20 rounded-[2rem] -skew-x-12 opacity-50" />
+                {selectedDiscountForModal.discount_type === 'percentage' ? (
+                  <span className="text-3xl tracking-tight z-10">{Number(selectedDiscountForModal.discount_value)}%</span>
+                ) : (
+                  <span className="text-3xl tracking-tight z-10">₹{Number(selectedDiscountForModal.discount_value)}</span>
+                )}
+              </div>
+              <h3 className="text-2xl font-bold font-heading text-slate-900">{selectedDiscountForModal.title}</h3>
+              {selectedDiscountForModal.description && (
+                <p className="text-sm text-slate-500 mt-2 max-w-[280px] leading-relaxed">{selectedDiscountForModal.description}</p>
+              )}
+            </div>
+
+            <div className="pt-2">
+              <h4 className="text-xs font-bold text-slate-400 mb-3 uppercase tracking-wider flex items-center gap-2">
+                <Sparkles size={14} className="text-amber-500" /> Valid For
+              </h4>
+              <div className="bg-slate-50 rounded-2xl p-4 border border-slate-100 max-h-48 overflow-y-auto scrollbar-hide">
+                {selectedDiscountForModal.applies_to === 'all' ? (
+                  <p className="text-sm font-semibold text-slate-700 flex items-center gap-3">
+                    <span className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-600 shrink-0">
+                      <Check size={16} />
+                    </span>
+                    Entire Menu
+                  </p>
+                ) : selectedDiscountForModal.applies_to === 'category' ? (
+                  <ul className="space-y-3">
+                    {categories
+                      .filter(c => selectedDiscountForModal.target_ids?.includes(c.id))
+                      .map(c => (
+                        <li key={c.id} className="text-sm font-semibold text-slate-700 flex items-center gap-3">
+                          <span className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-600 shrink-0">
+                            <Check size={16} />
+                          </span>
+                          {c.name}
+                        </li>
+                      ))}
+                  </ul>
+                ) : (
+                  <ul className="space-y-3">
+                    {categories.flatMap(c => c.items)
+                      .filter(i => selectedDiscountForModal.target_ids?.includes(i.id))
+                      .map(i => (
+                        <li key={i.id} className="text-sm font-semibold text-slate-700 flex items-center gap-3">
+                          <span className="w-8 h-8 rounded-full bg-green-100 flex items-center justify-center text-green-600 shrink-0">
+                            <Check size={16} />
+                          </span>
+                          {i.name}
+                        </li>
+                      ))}
+                  </ul>
+                )}
+              </div>
+            </div>
+
+            <div className="pt-4">
+              <button
+                onClick={() => {
+                  setActiveDiscountFilter(selectedDiscountForModal.id);
+                  setSelectedDiscountForModal(null);
+                  window.scrollTo({ top: 300, behavior: 'smooth' });
+                }}
+                className="w-full py-4 px-4 rounded-2xl font-bold text-white transition-all transform hover:scale-[1.02] active:scale-95 flex items-center justify-center gap-2"
+                style={{ 
+                  backgroundColor: primaryColor,
+                  boxShadow: `0 8px 24px ${primaryColor}50`
+                }}
+              >
+                View Applicable Items
+              </button>
+            </div>
+          </div>
+        )}
+      </Modal>
 
       <LanguageSelectorModal
         isOpen={isLanguageModalOpen}
