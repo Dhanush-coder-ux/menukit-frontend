@@ -800,10 +800,10 @@ export function PublicMenuPage() {
                         Tap to use
                       </span>
                     </div>
-
-                    {/* Shimmer effect on hover */}
-                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-slate-50 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-300" />
                   </div>
+                  
+                  {/* Constant shimmer effect spanning the whole card */}
+                  <div className="absolute inset-0 z-10 bg-gradient-to-r from-transparent via-white/60 to-transparent -translate-x-full animate-[shimmer_2.5s_infinite] pointer-events-none mix-blend-overlay" />
                 </div>
               ))}
             </div>
@@ -1212,13 +1212,15 @@ export function PublicMenuPage() {
           <div className="space-y-5 mt-2">
             <div className="flex flex-col items-center text-center pb-5 border-b border-slate-100">
               <div 
-                className="w-24 h-24 rounded-[2rem] flex items-center justify-center shrink-0 text-white font-bold mb-4 transform hover:scale-105 transition-transform duration-300 relative"
+                className="min-w-[6rem] w-auto h-24 px-6 rounded-[2rem] flex items-center justify-center shrink-0 text-white font-bold mb-4 transform hover:scale-105 transition-transform duration-300 relative overflow-hidden"
                 style={{ 
                   backgroundColor: primaryColor,
                   boxShadow: `0 12px 32px ${primaryColor}60`
                 }}
               >
                 <div className="absolute inset-0 bg-white/20 rounded-[2rem] -skew-x-12 opacity-50" />
+                {/* Auto-shining effect */}
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent -translate-x-full animate-[shimmer_2.5s_infinite] pointer-events-none" />
                 {selectedDiscountForModal.discount_type === 'percentage' && <span className="text-3xl tracking-tight z-10">{Number(selectedDiscountForModal.discount_value)}%</span>}
                 {selectedDiscountForModal.discount_type === 'flat' && <span className="text-3xl tracking-tight z-10">{settings?.currency || '₹'}{Number(selectedDiscountForModal.discount_value)}</span>}
                 {selectedDiscountForModal.discount_type === 'bogo' && <span className="text-3xl tracking-tight z-10 text-center text-2xl px-2">Buy {selectedDiscountForModal.buy_quantity} Get {selectedDiscountForModal.get_quantity}</span>}
@@ -1363,10 +1365,10 @@ export function PublicMenuPage() {
                       View
                     </span>
                   </div>
-
-                  {/* Shimmer effect on hover */}
-                  <div className="absolute inset-0 bg-gradient-to-r from-transparent via-slate-50 to-transparent -translate-x-full group-hover:animate-[shimmer_1.5s_infinite] opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity duration-300" />
                 </div>
+                
+                {/* Constant shimmer effect spanning the whole card */}
+                <div className="absolute inset-0 z-10 bg-gradient-to-r from-transparent via-white/60 to-transparent -translate-x-full animate-[shimmer_2.5s_infinite] pointer-events-none mix-blend-overlay" />
               </div>
             ))
           )}

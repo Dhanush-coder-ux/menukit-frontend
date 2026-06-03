@@ -1,4 +1,5 @@
 import * as React from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { X } from 'lucide-react';
 import { cn } from '@/utils/cn';
@@ -13,6 +14,12 @@ interface ModalProps {
 }
 
 export function Modal({ isOpen, onClose, title, description, children, className }: ModalProps) {
+  const [mounted, setMounted] = React.useState(false);
+
+  React.useEffect(() => {
+    setMounted(true);
+  }, []);
+
   React.useEffect(() => {
     if (isOpen) {
       document.body.style.overflow = 'hidden';
@@ -24,10 +31,10 @@ export function Modal({ isOpen, onClose, title, description, children, className
     };
   }, [isOpen]);
 
-  return (
+  const modalContent = (
     <AnimatePresence>
       {isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 sm:p-0">
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 sm:p-0">
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
@@ -41,7 +48,7 @@ export function Modal({ isOpen, onClose, title, description, children, className
             exit={{ opacity: 0, scale: 0.95, y: 20 }}
             transition={{ type: "spring", duration: 0.5, bounce: 0.3 }}
             className={cn(
-              "glass-panel relative w-full max-w-lg rounded-2xl p-6 shadow-2xl z-10 max-h-[70vh] overflow-y-auto mb-8 sm:mb-0",
+              "glass-panel relative w-full max-w-lg rounded-2xl p-4 sm:p-6 shadow-2xl z-10 max-h-[85dvh] sm:max-h-[85vh] overflow-y-auto mb-8 sm:mb-0",
               className
             )}
           >
@@ -66,4 +73,8 @@ export function Modal({ isOpen, onClose, title, description, children, className
       )}
     </AnimatePresence>
   );
+
+  if (!mounted) return null;
+
+  return createPortal(modalContent, document.body);
 }

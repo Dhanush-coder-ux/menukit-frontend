@@ -57,10 +57,11 @@ export function QRCodePage() {
       setIsGenerating(false);
     }
   };
+  const publicLink = qrCode?.qr_url || '';
 
   const handleCopyLink = () => {
-    if (!qrCode) return;
-    navigator.clipboard.writeText(qrCode.qr_url);
+    if (!publicLink) return;
+    navigator.clipboard.writeText(publicLink);
     toast.success('Link copied to clipboard!');
   };
 
@@ -491,7 +492,7 @@ export function QRCodePage() {
               <CardContent>
                 <div className="flex items-center gap-2">
                   <div className="flex-1 bg-slate-50 dark:bg-slate-800 px-4 py-3 rounded-xl text-sm text-slate-600 dark:text-slate-300 font-mono overflow-x-auto whitespace-nowrap border border-slate-200 dark:border-slate-700">
-                    {qrCode.qr_url}
+                    {publicLink}
                   </div>
                   <Button variant="secondary" onClick={handleCopyLink} className="shrink-0" title="Copy Link">
                     <Copy size={18} />
@@ -501,7 +502,7 @@ export function QRCodePage() {
                   <Button 
                     variant="ghost" 
                     className="text-primary hover:text-primary-700 p-0 h-auto"
-                    onClick={() => window.open(qrCode.qr_url, '_blank')}
+                    onClick={() => window.open(publicLink, '_blank')}
                     leftIcon={<ExternalLink size={16} />}
                   >
                     Open public menu in new tab
