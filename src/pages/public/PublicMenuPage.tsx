@@ -988,6 +988,36 @@ export function PublicMenuPage() {
             ))
           )}
         </div>
+
+        {/* --- Google Reviews Section --- */}
+        {(shop.google_review_link || shop.review_widget_code) && (
+          <div className="px-4 sm:px-6 md:px-8 max-w-4xl mx-auto pb-12 mt-8 border-t pt-8" style={{ borderColor: 'rgba(100, 116, 139, 0.1)' }}>
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2" style={{ color: theme === 'dark' ? 'white' : 'inherit' }}>
+              <Star size={20} className="text-amber-500 fill-amber-500" />
+              Customer Reviews
+            </h2>
+            
+            {shop.google_review_link && (
+              <a 
+                href={shop.google_review_link}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="block w-full py-3 px-4 rounded-xl font-bold text-center mb-6 transition-transform active:scale-[0.98] shadow-sm flex items-center justify-center gap-2"
+                style={{ backgroundColor: theme === 'dark' ? '#1e293b' : 'white', color: primaryColor, border: `1px solid ${primaryColor}40` }}
+              >
+                Rate us on Google Maps <ExternalLink size={16} />
+              </a>
+            )}
+            
+            {shop.review_widget_code && (
+              <div 
+                className="w-full overflow-hidden rounded-xl bg-white/5"
+                dangerouslySetInnerHTML={{ __html: shop.review_widget_code }}
+              />
+            )}
+          </div>
+        )}
+
       </div>
 
       {/* Shop Info Modal */}
@@ -1068,6 +1098,49 @@ export function PublicMenuPage() {
             );
           })()}
 
+          {/* Google Maps & Reviews */}
+          {shop.address && (
+            <div className="pt-4 mt-4 border-t border-slate-100 space-y-2">
+              {/* Google Maps link */}
+              <a
+                href={`https://maps.google.com/?q=${encodeURIComponent(shop.name + ' ' + (shop.address || ''))}`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors group"
+              >
+                <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 bg-blue-50 text-blue-600">
+                  <MapPin size={18} />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-slate-800 group-hover:text-blue-600 transition-colors">
+                    View on Google Maps
+                  </p>
+                  <p className="text-xs text-slate-400">Get directions</p>
+                </div>
+                <ExternalLink size={14} className="text-slate-400 group-hover:text-blue-500 transition-colors" />
+              </a>
+
+              {/* Google Reviews link */}
+              <a
+                href={`https://www.google.com/search?q=${encodeURIComponent(shop.name + ' ' + (shop.address || ''))}&tbm=lcl#lrd=,1`}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-3 p-3 rounded-xl hover:bg-slate-50 transition-colors group"
+              >
+                <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0 bg-amber-50 text-amber-500">
+                  <Star size={18} />
+                </div>
+                <div className="flex-1">
+                  <p className="text-sm font-semibold text-slate-800 group-hover:text-amber-600 transition-colors">
+                    Google Reviews
+                  </p>
+                  <p className="text-xs text-slate-400">Read & write reviews on Google</p>
+                </div>
+                <ExternalLink size={14} className="text-slate-400 group-hover:text-amber-500 transition-colors" />
+              </a>
+            </div>
+          )}
+
           <div className="pt-4 mt-4 border-t border-slate-200 flex flex-col items-center gap-1">
             <span className="text-[10px] uppercase tracking-widest text-slate-400 font-bold">Powered by</span>
             <a
@@ -1082,6 +1155,7 @@ export function PublicMenuPage() {
           </div>
         </div>
       </Modal>
+
 
 
       {/* Filter FAB */}

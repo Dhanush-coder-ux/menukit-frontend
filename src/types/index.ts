@@ -45,10 +45,31 @@ export interface Shop {
   opening_time: string | null;
   closing_time: string | null;
   is_active: boolean;
+  latitude: number | null;
+  longitude: number | null;
+  google_review_link: string | null;
+  review_widget_code: string | null;
   settings: ShopSettings | null;
   theme: ThemeSettings | null;
   created_at: string;
 }
+
+export interface PublicShopListing {
+  id: string;
+  name: string;
+  slug: string;
+  logo_url: string | null;
+  address: string | null;
+  latitude: number | null;
+  longitude: number | null;
+  opening_time: string | null;
+  closing_time: string | null;
+  active_discounts_count: number;
+  best_discount_label: string | null;
+  average_rating: number | null;
+  total_reviews: number;
+}
+
 
 export interface Category {
   id: string;

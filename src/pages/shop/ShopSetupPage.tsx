@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from 'react';
 import { toast } from 'react-hot-toast';
-import { Store, MapPin, Phone, UploadCloud, Save, Settings, ChevronRight, Check, Edit2, Clock } from 'lucide-react';
+import { Store, MapPin, Phone, UploadCloud, Save, Settings, ChevronRight, Check, Edit2, Clock, Star } from 'lucide-react';
 import { api } from '@/services/api';
 import { useShopStore } from '@/store/shopStore';
 
@@ -35,7 +35,11 @@ export function ShopSetupPage() {
     logo_url: '',
     banner_url: '',
     opening_time: '',
-    closing_time: ''
+    closing_time: '',
+    latitude: '',
+    longitude: '',
+    google_review_link: '',
+    review_widget_code: '',
   });
 
   const [settingsData, setSettingsData] = useState({
@@ -68,7 +72,11 @@ export function ShopSetupPage() {
             logo_url: loadedShop.logo_url || '',
             banner_url: loadedShop.banner_url || '',
             opening_time: loadedShop.opening_time || '',
-            closing_time: loadedShop.closing_time || ''
+            closing_time: loadedShop.closing_time || '',
+            latitude: loadedShop.latitude?.toString() || '',
+            longitude: loadedShop.longitude?.toString() || '',
+            google_review_link: loadedShop.google_review_link || '',
+            review_widget_code: loadedShop.review_widget_code || '',
           });
           if (loadedShop.settings) {
             setSettingsData({
@@ -148,9 +156,14 @@ export function ShopSetupPage() {
     // Auto-save contact & timing details when moving past step 2
     if (currentStep === 2 && shop?.id) {
       try {
-        const res = await api.put('/shops/me', formData);
+        const payload: any = { ...formData };
+        payload.latitude = payload.latitude ? parseFloat(payload.latitude) : null;
+        payload.longitude = payload.longitude ? parseFloat(payload.longitude) : null;
+        
+        const res = await api.put('/shops/me', payload);
         setShop(res.data);
-      } catch {
+      } catch (err: any) {
+        console.error('Save error:', err);
         toast.error('Failed to save contact details');
         return;
       }
@@ -173,11 +186,15 @@ export function ShopSetupPage() {
 
     setIsLoading(true);
     try {
+      const payload: any = { ...formData };
+      payload.latitude = payload.latitude ? parseFloat(payload.latitude) : null;
+      payload.longitude = payload.longitude ? parseFloat(payload.longitude) : null;
+
       let res;
       if (shop?.id) {
-        res = await api.put('/shops/me', formData);
+        res = await api.put('/shops/me', payload);
       } else {
-        res = await api.post('/shops', formData);
+        res = await api.post('/shops', payload);
       }
       
       // Update settings
@@ -395,8 +412,88 @@ export function ShopSetupPage() {
                 placeholder="e.g. 10:00 PM"
               />
             </div>
+
+            {/* Coordinates for Map Discovery */}
+            <div className="space-y-1.5 mt-2">
+              <label className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5">
+                <MapPin size={15} className="text-orange-500" />
+                Map Coordinates
+                <span className="text-xs font-normal text-slate-400 ml-1">(for store discovery)</span>
+              </label>
+              <div className="grid grid-cols-2 gap-3 p-3 bg-orange-50 dark:bg-orange-900/10 rounded-xl border border-orange-100 dark:border-orange-800/20">
+                <Input
+                  label="Latitude"
+                  name="latitude"
+                  type="number"
+                  step="0.000001"
+                  value={formData.latitude}
+                  onChange={handleChange}
+                  placeholder="e.g. 12.9716"
+                />
+                <Input
+                  label="Longitude"
+                  name="longitude"
+                  type="number"
+                  step="0.000001"
+                  value={formData.longitude}
+                  onChange={handleChange}
+                  placeholder="e.g. 77.5946"
+                />
+              </div>
+              <p className="text-xs text-slate-400 mt-1">
+                💡 Find on{' '}
+                <a
+                  href="https://maps.google.com"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="text-orange-500 hover:underline"
+                >
+                  Google Maps
+                </a>{' '}
+                → right-click your location → copy coordinates.
+              </p>
+            </div>
+
+            {/* Google Reviews */}
+            <div className="space-y-4 mt-6 pt-6 border-t border-slate-100 dark:border-slate-800">
+              <div>
+                <label className="text-sm font-medium text-slate-700 dark:text-slate-300 flex items-center gap-1.5 mb-1.5">
+                  <Star size={15} className="text-amber-500 fill-amber-500" />
+                  Google Reviews
+                </label>
+                <Input
+                  label="Google Review Link (Optional)"
+                  name="google_review_link"
+                  value={formData.google_review_link}
+                  onChange={handleChange}
+                  placeholder="e.g. https://g.page/r/Cdfg.../review"
+                />
+                <p className="text-xs text-slate-400 mt-1 mb-3">
+                  This will add a "Rate us on Google" button to your menu, redirecting customers to your Google review page.
+                </p>
+                
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                    Review Widget Embed Code (Optional)
+                  </label>
+                  <textarea
+                    name="review_widget_code"
+                    value={formData.review_widget_code}
+                    onChange={e => setFormData(p => ({ ...p, review_widget_code: e.target.value }))}
+                    rows={4}
+                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
+                    placeholder={`<!-- Paste Elfsight or Trustpilot iframe code here -->`}
+                  />
+                  <p className="text-xs text-slate-400 mt-1">
+                    Want to show your existing reviews? Create a free widget at <a href="https://elfsight.com/google-reviews-widget/" target="_blank" rel="noreferrer" className="text-orange-500 hover:underline">Elfsight</a> and paste the embed code here.
+                  </p>
+                </div>
+              </div>
+            </div>
+
           </div>
         )}
+
 
         {/* Step 3: Branding */}
         {currentStep === 3 && (

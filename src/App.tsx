@@ -26,6 +26,7 @@ import { DiscountsPage } from '@/pages/discounts/DiscountsPage';
 import { PublicMenuPage } from '@/pages/public/PublicMenuPage';
 import { PublicItemPage } from '@/pages/public/PublicItemPage';
 import { TermsPage } from '@/pages/public/TermsPage';
+import { StoreDiscoveryPage } from '@/pages/public/StoreDiscoveryPage';
 
 const AdminPlaceholder = () => (
   <div className="flex items-center justify-center min-h-[60vh]">
@@ -75,7 +76,8 @@ function App() {
         </Route>
       </Route>
 
-      {/* Public Menu Route */}
+      {/* Public Routes */}
+      <Route path="/discover" element={<StoreDiscoveryPage />} />
       <Route path="/shop/:id" element={<PublicMenuPage />} />
       <Route path="/shop/:id/item/:itemId" element={<PublicItemPage />} />
       <Route path="/terms" element={<TermsPage />} />
