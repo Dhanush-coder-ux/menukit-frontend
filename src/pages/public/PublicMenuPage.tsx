@@ -1348,24 +1348,55 @@ export function PublicMenuPage() {
         {selectedDiscountForModal && (
           <div className="space-y-5 mt-2">
             <div className="flex flex-col items-center text-center pb-5 border-b border-slate-100">
-              <div 
-                className="min-w-[6rem] w-auto h-24 px-6 rounded-[2rem] flex items-center justify-center shrink-0 text-white font-bold mb-4 transform hover:scale-105 transition-transform duration-300 relative overflow-hidden"
-                style={{ 
-                  backgroundColor: primaryColor,
-                  boxShadow: `0 12px 32px ${primaryColor}60`
-                }}
-              >
-                <div className="absolute inset-0 bg-white/20 rounded-[2rem] -skew-x-12 opacity-50" />
-                {/* Auto-shining effect */}
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent -translate-x-full animate-[shimmer_2.5s_infinite] pointer-events-none" />
-                {selectedDiscountForModal.discount_type === 'percentage' && <span className="text-3xl tracking-tight z-10">{Number(selectedDiscountForModal.discount_value)}%</span>}
-                {selectedDiscountForModal.discount_type === 'flat' && <span className="text-3xl tracking-tight z-10">{settings?.currency || '₹'}{Number(selectedDiscountForModal.discount_value)}</span>}
-                {selectedDiscountForModal.discount_type === 'bogo' && <span className="text-3xl tracking-tight z-10 text-center text-2xl px-2">Buy {selectedDiscountForModal.buy_quantity} Get {selectedDiscountForModal.get_quantity}</span>}
-                {selectedDiscountForModal.discount_type === 'combo' && <span className="text-3xl tracking-tight z-10">{settings?.currency || '₹'}{Number(selectedDiscountForModal.discount_value)}</span>}
-              </div>
+              {(() => {
+                const isCashLook = selectedDiscountForModal.discount_type === 'flat' || selectedDiscountForModal.discount_type === 'combo';
+                return isCashLook ? (
+                  <div 
+                    className="min-w-[8rem] w-auto h-20 px-8 flex items-center justify-center shrink-0 text-white font-bold mb-4 transform hover:scale-105 transition-transform duration-300 relative overflow-hidden"
+                    style={{ 
+                      backgroundColor: '#16a34a',
+                      borderRadius: '8px',
+                      boxShadow: '0 12px 32px #16a34a60'
+                    }}
+                  >
+                    <div className="absolute inset-1.5 border-2 border-white/30 border-dashed rounded-[4px]" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/40 to-transparent -translate-x-full animate-[shimmer_2.5s_infinite] pointer-events-none" />
+                    <span className="text-3xl tracking-tight z-10 font-mono">
+                      {settings?.currency || '₹'}{Number(selectedDiscountForModal.discount_value)}
+                    </span>
+                  </div>
+                ) : (
+                  <div 
+                    className="min-w-[8rem] w-auto h-24 px-8 flex items-center justify-center shrink-0 text-white font-bold mb-4 transform hover:scale-105 transition-transform duration-300 relative overflow-hidden"
+                    style={{ 
+                      backgroundColor: primaryColor,
+                      borderRadius: '16px',
+                      boxShadow: `0 12px 32px ${primaryColor}60`
+                    }}
+                  >
+                    <div className="absolute -left-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-white rounded-full shadow-[inset_0_0_10px_rgba(0,0,0,0.1)]" />
+                    <div className="absolute -right-4 top-1/2 -translate-y-1/2 w-8 h-8 bg-white rounded-full shadow-[inset_0_0_10px_rgba(0,0,0,0.1)]" />
+                    <div className="absolute inset-y-2 left-6 border-l-2 border-white/30 border-dashed" />
+                    <div className="absolute inset-y-2 right-6 border-r-2 border-white/30 border-dashed" />
+                    
+                    <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/50 to-transparent -translate-x-full animate-[shimmer_2.5s_infinite] pointer-events-none" />
+                    <span className="text-3xl tracking-tight z-10 text-center px-2">
+                      {selectedDiscountForModal.discount_type === 'percentage' 
+                        ? `${Number(selectedDiscountForModal.discount_value)}%`
+                        : `Buy ${selectedDiscountForModal.buy_quantity}\nGet ${selectedDiscountForModal.get_quantity}`}
+                    </span>
+                  </div>
+                );
+              })()}
               <h3 className="text-2xl font-bold font-heading text-slate-900">{selectedDiscountForModal.title}</h3>
               {selectedDiscountForModal.description && (
                 <p className="text-sm text-slate-500 mt-2 max-w-[280px] leading-relaxed">{selectedDiscountForModal.description}</p>
+              )}
+              {selectedDiscountForModal.members_only && (
+                <div className="mt-3 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-100 text-purple-700 text-xs font-bold uppercase tracking-wider">
+                  <Crown size={14} />
+                  Members Only
+                </div>
               )}
             </div>
 

@@ -17,6 +17,7 @@ export function PublicItemPage() {
 
   // Interaction state
   const [selectedVariantIdx, setSelectedVariantIdx] = useState(0);
+  const [selectedAddons, setSelectedAddons] = useState<number[]>([]);
   const [lightboxImage, setLightboxImage] = useState<string | null>(null);
 
   // Reviews state
@@ -30,6 +31,8 @@ export function PublicItemPage() {
   const [reviewSubmitted, setReviewSubmitted] = useState(false);
 
   useEffect(() => {
+    setSelectedVariantIdx(0);
+    setSelectedAddons([]);
     const fetchData = async () => {
       try {
         const [shopRes, itemRes, discountsRes] = await Promise.all([
@@ -209,6 +212,15 @@ export function PublicItemPage() {
                   isDiscounted = true;
                 }
 
+                let addonsTotal = 0;
+                if (item.addons) {
+                  selectedAddons.forEach(idx => {
+                    addonsTotal += Number(item.addons![idx].price);
+                  });
+                }
+                basePrice += addonsTotal;
+                originalPrice += addonsTotal;
+
                 return (
                   <div className="flex items-center gap-2">
                     {settings?.currency || '₹'}{basePrice.toFixed(2).replace(/\.00$/, '')}
@@ -241,6 +253,30 @@ export function PublicItemPage() {
                   </span>
                 </button>
               ))}
+            </div>
+          </div>
+        )}
+
+        {item.addons && item.addons.length > 0 && (
+          <div className="mb-6">
+            <h3 className="font-semibold text-sm mb-3 text-slate-700 dark:text-slate-300">Add-ons</h3>
+            <div className="grid grid-cols-2 gap-2">
+              {item.addons.map((addon, idx) => {
+                const isSelected = selectedAddons.includes(idx);
+                return (
+                  <button
+                    key={idx}
+                    onClick={() => setSelectedAddons(prev => prev.includes(idx) ? prev.filter(i => i !== idx) : [...prev, idx])}
+                    className={`p-3 rounded-xl border text-sm font-medium flex justify-between items-center transition-all ${isSelected ? 'border-primary bg-primary/5 ring-1 ring-primary' : 'border-slate-200 dark:border-slate-800 hover:border-primary/50 bg-slate-50 dark:bg-slate-900/50'}`}
+                    style={isSelected ? { borderColor: primaryColor, backgroundColor: `${primaryColor}10` } : {}}
+                  >
+                    <span className={isSelected ? 'font-semibold' : 'text-slate-700 dark:text-slate-300'}>{addon.name}</span>
+                    <span className="text-xs font-bold" style={{ color: primaryColor }}>
+                      +{settings?.currency || '₹'}{addon.price}
+                    </span>
+                  </button>
+                );
+              })}
             </div>
           </div>
         )}

@@ -1067,7 +1067,10 @@ export function StoreDiscoveryPage() {
       )}
 
       {/* Offers Modal */}
-      {offersShopId && (
+      {offersShopId && (() => {
+        const offersShop = shops.find(s => s.id === offersShopId);
+        const showMenuInDiscovery = offersShop?.show_menus_in_discovery !== false;
+        return (
         <div style={{
           position: 'fixed', inset: 0, zIndex: 9999, background: 'rgba(0,0,0,.5)', backdropFilter: 'blur(4px)',
           display: 'flex', alignItems: 'flex-end', justifyContent: 'center', padding: '16px'
@@ -1089,7 +1092,14 @@ export function StoreDiscoveryPage() {
                     key={disc.id}
                     className="relative shrink-0 w-full flex shadow-md rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1 bg-white group"
                     style={{ border: `1px solid #f9731630` }}
-                    onClick={() => { setOffersShopId(null); navigate(`/shop/${offersShopId}`); }}
+                    onClick={() => { 
+                      setOffersShopId(null); 
+                      if (showMenuInDiscovery) {
+                        navigate(`/shop/${offersShopId}`); 
+                      } else {
+                        setInfoShopId(offersShopId);
+                      }
+                    }}
                   >
                     {/* Left Ticket Stub */}
                     <div
@@ -1153,7 +1163,7 @@ export function StoreDiscoveryPage() {
                           </span>
                         </div>
                         <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 group-hover:text-slate-600 transition-colors flex items-center gap-1 shrink-0 whitespace-nowrap">
-                          Tap to use
+                          {showMenuInDiscovery ? 'Tap to use' : 'View Info'}
                         </span>
                       </div>
                     </div>
@@ -1161,12 +1171,19 @@ export function StoreDiscoveryPage() {
                 ))
               )}
             </div>
-            <button onClick={() => { setOffersShopId(null); navigate(`/shop/${offersShopId}`); }} style={{ width: '100%', padding: '14px', background: '#f97316', color: 'white', border: 'none', borderRadius: 12, fontWeight: 700, cursor: 'pointer', marginTop: 16 }}>
-              Order Now
-            </button>
+            {showMenuInDiscovery ? (
+              <button onClick={() => { setOffersShopId(null); navigate(`/shop/${offersShopId}`); }} style={{ width: '100%', padding: '14px', background: '#f97316', color: 'white', border: 'none', borderRadius: 12, fontWeight: 700, cursor: 'pointer', marginTop: 16 }}>
+                Order Now
+              </button>
+            ) : (
+              <button onClick={() => { setOffersShopId(null); setInfoShopId(offersShopId); }} style={{ width: '100%', padding: '14px', background: '#e2e8f0', color: '#475569', border: 'none', borderRadius: 12, fontWeight: 700, cursor: 'pointer', marginTop: 16 }}>
+                Shop Info
+              </button>
+            )}
           </div>
         </div>
-      )}
+        );
+      })()}
 
       <style>{`
         @keyframes slideUp {
