@@ -14,11 +14,13 @@ export interface AuthResponse {
 }
 
 export interface ShopSettings {
-  id: string;
+  id?: string;
   currency: string;
   language: string;
   show_prices: boolean;
   show_offers: boolean;
+  is_discoverable: boolean;
+  show_menus_in_discovery: boolean;
 }
 
 export interface ThemeSettings {
@@ -65,9 +67,10 @@ export interface PublicShopListing {
   opening_time: string | null;
   closing_time: string | null;
   active_discounts_count: number;
-  best_discount_label: string | null;
-  average_rating: number | null;
+  best_discount_label?: string | null;
+  average_rating?: number | null;
   total_reviews: number;
+  show_menus_in_discovery: boolean;
 }
 
 

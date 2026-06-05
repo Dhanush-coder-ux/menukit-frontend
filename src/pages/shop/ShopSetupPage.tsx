@@ -39,14 +39,15 @@ export function ShopSetupPage() {
     latitude: '',
     longitude: '',
     google_review_link: '',
-    review_widget_code: '',
   });
 
   const [settingsData, setSettingsData] = useState({
     currency: '₹',
     language: 'en',
     show_prices: true,
-    show_offers: true
+    show_offers: true,
+    is_discoverable: true,
+    show_menus_in_discovery: true,
   });
 
   const logoInputRef = useRef<HTMLInputElement>(null);
@@ -76,14 +77,15 @@ export function ShopSetupPage() {
             latitude: loadedShop.latitude?.toString() || '',
             longitude: loadedShop.longitude?.toString() || '',
             google_review_link: loadedShop.google_review_link || '',
-            review_widget_code: loadedShop.review_widget_code || '',
           });
           if (loadedShop.settings) {
             setSettingsData({
               currency: loadedShop.settings.currency || '₹',
               language: loadedShop.settings.language || 'en',
               show_prices: loadedShop.settings.show_prices !== false,
-              show_offers: loadedShop.settings.show_offers !== false
+              show_offers: loadedShop.settings.show_offers !== false,
+              is_discoverable: loadedShop.settings.is_discoverable !== false,
+              show_menus_in_discovery: loadedShop.settings.show_menus_in_discovery !== false,
             });
           }
           setViewMode('summary');
@@ -469,25 +471,11 @@ export function ShopSetupPage() {
                   placeholder="e.g. https://g.page/r/Cdfg.../review"
                 />
                 <p className="text-xs text-slate-400 mt-1 mb-3">
-                  This will add a "Rate us on Google" button to your menu, redirecting customers to your Google review page.
+                  This will add a "Rate us on Google" button to your menu, redirecting customers to your Google review page.{' '}
+                  <a href="https://support.google.com/business/answer/7030623" target="_blank" rel="noopener noreferrer" className="text-orange-500 hover:underline font-medium">
+                    Learn how to find your link
+                  </a>
                 </p>
-                
-                <div className="space-y-1.5">
-                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-                    Review Widget Embed Code (Optional)
-                  </label>
-                  <textarea
-                    name="review_widget_code"
-                    value={formData.review_widget_code}
-                    onChange={e => setFormData(p => ({ ...p, review_widget_code: e.target.value }))}
-                    rows={4}
-                    className="w-full px-3 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-orange-500/20 focus:border-orange-500"
-                    placeholder={`<!-- Paste Elfsight or Trustpilot iframe code here -->`}
-                  />
-                  <p className="text-xs text-slate-400 mt-1">
-                    Want to show your existing reviews? Create a free widget at <a href="https://elfsight.com/google-reviews-widget/" target="_blank" rel="noreferrer" className="text-orange-500 hover:underline">Elfsight</a> and paste the embed code here.
-                  </p>
-                </div>
               </div>
             </div>
 
@@ -632,6 +620,22 @@ export function ShopSetupPage() {
                 onChange={(c) => setSettingsData({ ...settingsData, show_offers: c })}
                 disabled
               />
+
+              <Switch
+                label="Enable Store Discovery"
+                description="Allow customers to find your restaurant on the public discovery map."
+                checked={settingsData.is_discoverable}
+                onChange={(c) => setSettingsData({ ...settingsData, is_discoverable: c })}
+              />
+              
+              {settingsData.is_discoverable && (
+                <Switch
+                  label="Show Menu on Discovery Map"
+                  description="Display the 'Shop Menus' button on the discovery page."
+                  checked={settingsData.show_menus_in_discovery}
+                  onChange={(c) => setSettingsData({ ...settingsData, show_menus_in_discovery: c })}
+                />
+              )}
             </div>
           </div>
         )}

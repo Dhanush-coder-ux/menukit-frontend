@@ -955,29 +955,83 @@ export function PublicMenuPage() {
                             )}
                           </div>
                           
-                          <div className={`mt-2 flex flex-wrap items-center gap-2 ${layoutStyle === 'grid' ? 'justify-between' : ''}`}>
-                            <span className="font-bold whitespace-nowrap" style={{ color: primaryColor }}>
-                              {(() => {
-                                const basePrice = Number(item.offer_price || item.price);
-                                if (!item.offer_price && activeDiscounts.length > 0) {
-                                  const disc = activeDiscounts.find(d => {
-                                    if (d.discount_type === 'bogo' || d.discount_type === 'combo') return false;
-                                    if (d.applies_to === 'all') return true;
-                                    if (d.applies_to === 'category' && d.target_ids?.includes(item.category_id)) return true;
-                                    if (d.applies_to === 'items' && d.target_ids?.includes(item.id)) return true;
-                                    return false;
-                                  });
-                                  if (disc) {
-                                    const v = Number(disc.discount_value);
-                                    const discounted = disc.discount_type === 'percentage'
-                                      ? basePrice * (1 - v / 100)
-                                      : Math.max(0, basePrice - v);
-                                    return <>{settings?.currency || '₹'}{discounted.toFixed(2).replace(/\.00$/, '')}</>;
-                                  }
+                          <div className={`mt-2 flex flex-col gap-1.5 ${layoutStyle === 'grid' ? 'justify-between' : ''}`}>
+                            {(() => {
+                              let basePrice = Number(item.price);
+                              let offerPrice = item.offer_price ? Number(item.offer_price) : null;
+                              let isFrom = false;
+
+                              if (item.variants && item.variants.length > 0) {
+                                let minPrice = Infinity;
+                                let minOffer = Infinity;
+                                item.variants.forEach(v => {
+                                  const p = Number(v.price);
+                                  const op = v.offer_price ? Number(v.offer_price) : p;
+                                  if (p < minPrice) minPrice = p;
+                                  if (op < minOffer) minOffer = op;
+                                });
+                                if (minPrice !== Infinity) {
+                                  basePrice = minPrice;
+                                  offerPrice = minOffer < minPrice ? minOffer : null;
+                                  isFrom = true;
                                 }
-                                return <>{settings?.currency || '₹'}{basePrice}</>;
-                              })()}
-                            </span>
+                              }
+
+                              let finalPrice = offerPrice !== null ? offerPrice : basePrice;
+                              let hasDiscount = offerPrice !== null && offerPrice < basePrice;
+                              
+                              if (!offerPrice && activeDiscounts.length > 0) {
+                                const disc = activeDiscounts.find(d => {
+                                  if (d.discount_type === 'bogo' || d.discount_type === 'combo') return false;
+                                  if (d.applies_to === 'all') return true;
+                                  if (d.applies_to === 'category' && d.target_ids?.includes(item.category_id)) return true;
+                                  if (d.applies_to === 'items' && d.target_ids?.includes(item.id)) return true;
+                                  return false;
+                                });
+                                if (disc) {
+                                  const v = Number(disc.discount_value);
+                                  const discounted = disc.discount_type === 'percentage'
+                                    ? basePrice * (1 - v / 100)
+                                    : Math.max(0, basePrice - v);
+                                  finalPrice = discounted;
+                                  hasDiscount = true;
+                                }
+                              }
+
+                              return (
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  {isFrom && <span className="text-[10px] text-slate-500 font-semibold uppercase tracking-wider">Starts from</span>}
+                                  {hasDiscount && (
+                                    <span className="text-[11px] text-slate-400 line-through decoration-slate-300 font-medium">
+                                      {settings?.currency || '₹'}{basePrice.toFixed(2).replace(/\.00$/, '')}
+                                    </span>
+                                  )}
+                                  <span className="font-bold whitespace-nowrap text-base" style={{ color: primaryColor }}>
+                                    {settings?.currency || '₹'}{finalPrice.toFixed(2).replace(/\.00$/, '')}
+                                  </span>
+                                  {hasDiscount && basePrice > 0 && (
+                                    <span className="text-[9px] font-bold px-1.5 py-0.5 rounded ml-1" style={{ backgroundColor: `${primaryColor}15`, color: primaryColor }}>
+                                      {Math.round(((basePrice - finalPrice) / basePrice) * 100)}% OFF
+                                    </span>
+                                  )}
+                                </div>
+                              );
+                            })()}
+
+                            {((item.variants && item.variants.length > 0) || (item.addons && item.addons.length > 0)) && (
+                              <div className="flex flex-wrap gap-1.5 mt-0.5">
+                                {item.variants && item.variants.length > 0 && (
+                                  <span className="text-[9px] font-bold text-slate-600 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded shadow-sm">
+                                    +{item.variants.length} Variants
+                                  </span>
+                                )}
+                                {item.addons && item.addons.length > 0 && (
+                                  <span className="text-[9px] font-bold text-slate-600 bg-slate-100 border border-slate-200 px-1.5 py-0.5 rounded shadow-sm">
+                                    +{item.addons.length} Add-ons
+                                  </span>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -992,7 +1046,7 @@ export function PublicMenuPage() {
         {/* --- Google Reviews Section --- */}
         {(shop.google_review_link || shop.review_widget_code) && (
           <div className="px-4 sm:px-6 md:px-8 max-w-4xl mx-auto pb-12 mt-8 border-t pt-8" style={{ borderColor: 'rgba(100, 116, 139, 0.1)' }}>
-            <h2 className="text-xl font-bold mb-4 flex items-center gap-2" style={{ color: theme === 'dark' ? 'white' : 'inherit' }}>
+            <h2 className="text-xl font-bold mb-4 flex items-center gap-2" style={{ color: theme?.theme === 'dark' ? 'white' : 'inherit' }}>
               <Star size={20} className="text-amber-500 fill-amber-500" />
               Customer Reviews
             </h2>
@@ -1003,7 +1057,7 @@ export function PublicMenuPage() {
                 target="_blank"
                 rel="noopener noreferrer"
                 className="block w-full py-3 px-4 rounded-xl font-bold text-center mb-6 transition-transform active:scale-[0.98] shadow-sm flex items-center justify-center gap-2"
-                style={{ backgroundColor: theme === 'dark' ? '#1e293b' : 'white', color: primaryColor, border: `1px solid ${primaryColor}40` }}
+                style={{ backgroundColor: theme?.theme === 'dark' ? '#1e293b' : 'white', color: primaryColor, border: `1px solid ${primaryColor}40` }}
               >
                 Rate us on Google Maps <ExternalLink size={16} />
               </a>
@@ -1438,12 +1492,19 @@ export function PublicMenuPage() {
                   )}
                   
                   <div className="mt-auto flex items-center justify-between">
-                    <span 
-                      className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded shadow-sm shrink-0"
-                      style={{ color: primaryColor, backgroundColor: `${primaryColor}15` }}
-                    >
-                      Limited Offer
-                    </span>
+                    {disc.members_only ? (
+                      <span className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded shadow-sm flex items-center gap-1 shrink-0 bg-purple-100 text-purple-700">
+                        <Crown size={10} className="shrink-0" />
+                        Members Only
+                      </span>
+                    ) : (
+                      <span 
+                        className="text-[9px] font-bold uppercase tracking-wider px-2 py-0.5 rounded shadow-sm shrink-0"
+                        style={{ color: primaryColor, backgroundColor: `${primaryColor}15` }}
+                      >
+                        Limited Offer
+                      </span>
+                    )}
                     <span className="text-[9px] font-bold uppercase tracking-wider text-slate-400 group-hover:text-slate-600 transition-colors ml-2 shrink-0">
                       View
                     </span>
