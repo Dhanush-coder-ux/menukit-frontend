@@ -121,6 +121,10 @@ export interface MenuItem {
   images: MenuImage[];
   variants?: MenuItemVariant[];
   addons?: MenuItemAddon[];
+  available_days?: string[];
+  available_time_presets?: string[];
+  custom_time_from?: string | null;
+  custom_time_to?: string | null;
   average_rating?: number | null;
   review_count?: number;
   created_at: string;

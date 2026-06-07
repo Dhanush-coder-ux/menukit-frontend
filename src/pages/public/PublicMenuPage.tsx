@@ -8,6 +8,15 @@ import { Modal } from '@/components/ui/Modal';
 import { GoogleTranslate } from '@/components/GoogleTranslate';
 import { LanguageSelectorModal } from '@/components/LanguageSelectorModal';
 
+const PRESET_TIMINGS: Record<string, string> = {
+  'Early Morning': '(04:00 - 08:00)',
+  'Morning': '(08:00 - 12:00)',
+  'Afternoon': '(12:00 - 16:00)',
+  'Evening': '(16:00 - 20:00)',
+  'Night': '(20:00 - 00:00)',
+  'Mid-night': '(00:00 - 04:00)'
+};
+
 // This is a special interface for the public menu structure returned by the backend
 interface PublicCategory extends Category {
   items: MenuItem[];
@@ -173,6 +182,15 @@ export function PublicMenuPage() {
         if (extraFilters.includes('bestseller') && !item.is_bestseller) matchesExtra = false;
         if (extraFilters.includes('in_stock') && !item.is_available) matchesExtra = false;
         if (extraFilters.includes('out_of_stock') && item.is_available) matchesExtra = false;
+
+        const timingFilters = extraFilters.filter(f => f.startsWith('timing_')).map(f => f.replace('timing_', ''));
+        if (timingFilters.length > 0) {
+          const isAllDay = !item.available_time_presets || item.available_time_presets.length === 0;
+          if (!isAllDay) {
+            const hasMatch = timingFilters.some(t => item.available_time_presets?.includes(t));
+            if (!hasMatch) matchesExtra = false;
+          }
+        }
 
         let matchesDiscount = true;
         if (activeDiscountFilter) {
@@ -377,7 +395,7 @@ export function PublicMenuPage() {
       <div className={`fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md shadow-sm border-b border-slate-200 transition-all duration-300 transform ${
         isScrolled ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
       }`}>
-        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center gap-2 sm:gap-3 transition-all overflow-x-auto scrollbar-hide no-scrollbar w-full">
+        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center justify-center gap-2 sm:gap-3 transition-all overflow-x-auto scrollbar-hide no-scrollbar w-full">
           {/* Small Logo */}
           {!isSearchFocused && (
             <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 border border-slate-200 bg-white flex items-center justify-center shadow-sm transition-all">
@@ -410,7 +428,7 @@ export function PublicMenuPage() {
               className={`w-full h-10 rounded-lg bg-white border border-slate-200 shadow-sm focus:outline-none focus:ring-2 transition-all duration-300 text-sm ${
                 isSearchFocused || searchQuery
                   ? 'pl-9 pr-8 text-slate-900 placeholder-slate-400' 
-                  : 'pl-9 pr-8 text-transparent sm:text-slate-900 placeholder-transparent sm:placeholder-slate-400 cursor-pointer sm:cursor-text'
+                  : 'p-0 sm:pl-9 sm:pr-8 text-transparent sm:text-slate-900 placeholder-transparent sm:placeholder-slate-400 cursor-pointer sm:cursor-text'
               }`}
               style={{ '--tw-ring-color': primaryColor } as any}
             />
@@ -584,7 +602,7 @@ export function PublicMenuPage() {
         </div>
 
         {/* Search & View Toggle */}
-        <div className="flex items-center gap-2 sm:gap-3 mb-3 transition-all overflow-x-auto scrollbar-hide no-scrollbar w-full">
+        <div className="flex items-center justify-center gap-2 sm:gap-3 mb-3 transition-all overflow-x-auto scrollbar-hide no-scrollbar w-full">
           <div className={`relative transition-all duration-300 overflow-hidden ${isSearchFocused || searchQuery ? 'flex-1' : 'w-12 sm:flex-1 shrink-0'}`}>
             <Search className={`absolute top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none transition-all duration-300 z-10 ${
               isSearchFocused || searchQuery ? 'left-4' : 'left-1/2 -translate-x-1/2 sm:left-4 sm:translate-x-0'
@@ -605,7 +623,7 @@ export function PublicMenuPage() {
               className={`w-full h-12 rounded-full border shadow-sm focus:outline-none focus:ring-2 transition-all duration-300 bg-white border-slate-200 text-sm sm:text-base ${
                 isSearchFocused || searchQuery
                   ? 'pl-12 pr-10 text-slate-900 placeholder-slate-400' 
-                  : 'pl-12 pr-10 text-transparent sm:text-slate-900 placeholder-transparent sm:placeholder-slate-400 cursor-pointer sm:cursor-text'
+                  : 'p-0 sm:pl-12 sm:pr-10 text-transparent sm:text-slate-900 placeholder-transparent sm:placeholder-slate-400 cursor-pointer sm:cursor-text'
               }`}
               style={{ '--tw-ring-color': primaryColor } as any}
             />
@@ -1043,6 +1061,26 @@ export function PublicMenuPage() {
                                 )}
                               </div>
                             )}
+
+                            {((item.available_days && item.available_days.length > 0) || (item.available_time_presets && item.available_time_presets.length > 0) || (item.custom_time_from && item.custom_time_to)) && (
+                              <div className="flex flex-wrap gap-1.5 mt-1.5">
+                                {item.available_days && item.available_days.length > 0 && (
+                                  <span className="text-[9px] font-bold text-blue-600 bg-blue-50 border border-blue-100 px-1.5 py-0.5 rounded shadow-sm max-w-[120px] truncate" title={item.available_days.join(', ')}>
+                                    {item.available_days.length === 7 ? 'Everyday' : item.available_days.join(', ')}
+                                  </span>
+                                )}
+                                {item.available_time_presets && item.available_time_presets.length > 0 && (
+                                  <span className="text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-100 px-2 py-0.5 rounded-md shadow-sm truncate max-w-full" title={item.available_time_presets.map(p => `${p} ${PRESET_TIMINGS[p] || ''}`).join(', ')}>
+                                    {item.available_time_presets.map(p => `${p} ${PRESET_TIMINGS[p] || ''}`).join(', ')}
+                                  </span>
+                                )}
+                                {(item.custom_time_from && item.custom_time_to) && (
+                                  <span className="text-[9px] font-bold text-purple-600 bg-purple-50 border border-purple-100 px-1.5 py-0.5 rounded shadow-sm max-w-[120px] truncate" title={`${item.custom_time_from} - ${item.custom_time_to}`}>
+                                    {item.custom_time_from} - {item.custom_time_to}
+                                  </span>
+                                )}
+                              </div>
+                            )}
                           </div>
                         </div>
                       </div>
@@ -1305,6 +1343,46 @@ export function PublicMenuPage() {
                   {extraFilters.includes(filter.id) && (
                     <div className="absolute top-2 right-2">
                       <Check size={14} style={{ color: primaryColor }} />
+                    </div>
+                  )}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Availability Section */}
+          <div>
+            <h3 className="text-xs font-bold mb-3 opacity-70 uppercase tracking-wider">Availability</h3>
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {[
+                { id: 'timing_Early Morning', label: 'Early Morning' },
+                { id: 'timing_Morning', label: 'Morning' },
+                { id: 'timing_Afternoon', label: 'Afternoon' },
+                { id: 'timing_Evening', label: 'Evening' },
+                { id: 'timing_Night', label: 'Night' },
+                { id: 'timing_Mid-night', label: 'Mid-night' }
+              ].map(filter => (
+                <label 
+                  key={filter.id}
+                  className={`relative flex items-center justify-center py-2.5 px-2 rounded-xl border cursor-pointer transition-all text-center ${
+                    extraFilters.includes(filter.id) 
+                      ? 'border-primary bg-primary/5 shadow-sm' 
+                      : 'border-slate-200 bg-white hover:bg-slate-50'
+                  }`}
+                  style={extraFilters.includes(filter.id) ? { borderColor: primaryColor, backgroundColor: `${primaryColor}10` } : {}}
+                >
+                  <input 
+                    type="checkbox" 
+                    className="hidden" 
+                    checked={extraFilters.includes(filter.id)}
+                    onChange={() => toggleExtraFilter(filter.id)}
+                  />
+                  <span className={`text-xs font-medium ${extraFilters.includes(filter.id) ? 'text-slate-900' : 'text-slate-600'}`}>
+                    {filter.label}
+                  </span>
+                  {extraFilters.includes(filter.id) && (
+                    <div className="absolute top-1.5 right-1.5">
+                      <Check size={12} style={{ color: primaryColor }} />
                     </div>
                   )}
                 </label>

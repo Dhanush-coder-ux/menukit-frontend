@@ -6,6 +6,15 @@ import { Shop, MenuItem, ReviewSummary, Discount } from '@/types';
 import { Lightbox } from '@/components/ui/Lightbox';
 import { Skeleton } from '@/components/ui/Skeleton';
 
+const PRESET_TIMINGS: Record<string, string> = {
+  'Early Morning': '(04:00 - 08:00)',
+  'Morning': '(08:00 - 12:00)',
+  'Afternoon': '(12:00 - 16:00)',
+  'Evening': '(16:00 - 20:00)',
+  'Night': '(20:00 - 00:00)',
+  'Mid-night': '(00:00 - 04:00)'
+};
+
 export function PublicItemPage() {
   const { id, itemId } = useParams();
   const navigate = useNavigate();
@@ -235,6 +244,26 @@ export function PublicItemPage() {
             </span>
           </div>
         </div>
+
+        {((item.available_days && item.available_days.length > 0) || (item.available_time_presets && item.available_time_presets.length > 0) || (item.custom_time_from && item.custom_time_to)) && (
+          <div className="mb-6 flex flex-wrap gap-2">
+            {item.available_days && item.available_days.length > 0 && (
+              <span className="text-xs font-bold text-blue-600 bg-blue-50 border border-blue-200 px-2.5 py-1 rounded-md shadow-sm">
+                Available: {item.available_days.length === 7 ? 'Everyday' : item.available_days.join(', ')}
+              </span>
+            )}
+            {item.available_time_presets && item.available_time_presets.length > 0 && (
+              <span className="text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-200 px-2.5 py-1 rounded-md shadow-sm">
+                Timing: {item.available_time_presets.map(p => `${p} ${PRESET_TIMINGS[p] || ''}`).join(', ')}
+              </span>
+            )}
+            {(item.custom_time_from && item.custom_time_to) && (
+              <span className="text-xs font-bold text-purple-600 bg-purple-50 border border-purple-200 px-2.5 py-1 rounded-md shadow-sm">
+                Hours: {item.custom_time_from} - {item.custom_time_to}
+              </span>
+            )}
+          </div>
+        )}
 
         {item.variants && item.variants.length > 0 && (
           <div className="mb-6">

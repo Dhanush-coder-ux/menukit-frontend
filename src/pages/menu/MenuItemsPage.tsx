@@ -55,7 +55,11 @@ export function MenuItemsPage() {
     is_available: true,
     variants: [] as MenuItemVariant[],
     addons: [] as MenuItemAddon[],
-    allow_ice_preference: false
+    allow_ice_preference: false,
+    available_days: [] as string[],
+    available_time_presets: [] as string[],
+    custom_time_from: '',
+    custom_time_to: ''
   };
   const [formData, setFormData] = useState(defaultForm);
 
@@ -171,7 +175,11 @@ export function MenuItemsPage() {
         is_available: item.is_available,
         variants: item.variants || [],
         addons: item.addons || [],
-        allow_ice_preference: item.allow_ice_preference || false
+        allow_ice_preference: item.allow_ice_preference || false,
+        available_days: item.available_days || [],
+        available_time_presets: item.available_time_presets || [],
+        custom_time_from: item.custom_time_from || '',
+        custom_time_to: item.custom_time_to || ''
       });
     } else {
       setEditingItem(null);
@@ -192,7 +200,7 @@ export function MenuItemsPage() {
     const basePrice = hasVariants ? formData.variants[0].price : formData.price;
     const baseOfferPrice = hasVariants ? formData.variants[0].offer_price : formData.offer_price;
     
-    if (currentStep < 3) {
+    if (currentStep < 4) {
       if (currentStep === 1 && (!formData.name.trim() || !formData.category_id)) {
         toast.error('Please fill required fields');
         return;
@@ -590,7 +598,7 @@ export function MenuItemsPage() {
           <div className="flex items-center justify-between mb-8 relative max-w-sm mx-auto">
             <div className="absolute left-0 right-0 top-1/2 h-0.5 bg-slate-200 dark:bg-slate-800 -z-10" />
             
-            {[1, 2, 3].map(step => {
+            {[1, 2, 3, 4].map(step => {
               const isClickable = !!editingItem;
               return (
                 <button 
@@ -1038,6 +1046,98 @@ export function MenuItemsPage() {
               </div>
             )}
 
+            {currentStep === 4 && (
+              <div className="space-y-6 animate-fade-in">
+                <div>
+                  <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">Available Days</h4>
+                  <p className="text-xs text-slate-500 mb-3">Leave all unchecked if available every day.</p>
+                  <div className="flex flex-wrap gap-2">
+                    {['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'].map(day => {
+                      const isSelected = formData.available_days.includes(day);
+                      return (
+                        <button
+                          key={day}
+                          type="button"
+                          onClick={() => {
+                            if (isSelected) {
+                              setFormData({ ...formData, available_days: formData.available_days.filter(d => d !== day) });
+                            } else {
+                              setFormData({ ...formData, available_days: [...formData.available_days, day] });
+                            }
+                          }}
+                          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${
+                            isSelected 
+                              ? 'bg-primary border-primary text-white' 
+                              : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'
+                          }`}
+                        >
+                          {day}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+                  <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">Timing Presets</h4>
+                  <p className="text-xs text-slate-500 mb-3">Leave all unchecked if available all day.</p>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { id: 'Early Morning', label: 'Early Morning (04:00 - 08:00)' },
+                      { id: 'Morning', label: 'Morning (08:00 - 12:00)' },
+                      { id: 'Afternoon', label: 'Afternoon (12:00 - 16:00)' },
+                      { id: 'Evening', label: 'Evening (16:00 - 20:00)' },
+                      { id: 'Night', label: 'Night (20:00 - 00:00)' },
+                      { id: 'Mid-night', label: 'Mid-night (00:00 - 04:00)' }
+                    ].map(preset => {
+                      const isSelected = formData.available_time_presets.includes(preset.id);
+                      return (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() => {
+                            if (isSelected) {
+                              setFormData({ ...formData, available_time_presets: formData.available_time_presets.filter(p => p !== preset.id) });
+                            } else {
+                              setFormData({ ...formData, available_time_presets: [...formData.available_time_presets, preset.id] });
+                            }
+                          }}
+                          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${
+                            isSelected 
+                              ? 'bg-primary border-primary text-white' 
+                              : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'
+                          }`}
+                        >
+                          {preset.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex gap-4">
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Custom Time From</label>
+                    <input 
+                      type="time" 
+                      value={formData.custom_time_from} 
+                      onChange={e => setFormData({ ...formData, custom_time_from: e.target.value })}
+                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-sm"
+                    />
+                  </div>
+                  <div className="flex-1">
+                    <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1.5">Custom Time To</label>
+                    <input 
+                      type="time" 
+                      value={formData.custom_time_to} 
+                      onChange={e => setFormData({ ...formData, custom_time_to: e.target.value })}
+                      className="w-full bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2.5 outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all text-sm"
+                    />
+                  </div>
+                </div>
+              </div>
+            )}
+
             <div className="flex justify-between items-center pt-4 mt-6 border-t border-slate-100 dark:border-slate-800">
               <Button 
                 variant="secondary" 
@@ -1050,7 +1150,7 @@ export function MenuItemsPage() {
                 {currentStep > 1 ? 'Back' : 'Cancel'}
               </Button>
               
-              {currentStep < 3 ? (
+              {currentStep < 4 ? (
                 <Button 
                   type="submit"
                 >
