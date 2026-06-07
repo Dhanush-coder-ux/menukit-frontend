@@ -386,43 +386,77 @@ export function MenuItemsPage() {
                         className="w-full h-full object-cover cursor-pointer"
                         onClick={() => setLightboxImage(item.image_url!)}
                       />
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          const primaryImg = item.images?.find(i => i.is_primary) || item.images?.[0];
-                          if (primaryImg) {
-                            setImageToDelete({ itemId: item.id, imageId: primaryImg.id });
-                          } else {
-                            toast.error('Cannot delete this image.');
-                          }
-                        }}
-                        className="absolute inset-0 m-auto w-10 h-10 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center opacity-100 sm:opacity-0 sm:group-hover/img:opacity-100 transition-opacity duration-200 shadow-lg shadow-red-900/20"
-                        title="Delete Image"
-                      >
-                        <Trash2 size={18} />
-                      </button>
+                      <div className="absolute inset-0 m-auto flex items-center justify-center gap-3 opacity-100 sm:opacity-0 sm:group-hover/img:opacity-100 transition-opacity duration-200 bg-black/20">
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            openModal(item);
+                          }}
+                          className="w-10 h-10 bg-white hover:bg-slate-100 text-slate-700 rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-105"
+                          title="Edit Item"
+                        >
+                          <Edit2 size={18} />
+                        </button>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDelete(item.id);
+                          }}
+                          className="w-10 h-10 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center shadow-lg shadow-red-900/20 transition-transform hover:scale-105"
+                          title="Delete Item"
+                        >
+                          <Trash2 size={18} />
+                        </button>
+                      </div>
                     </div>
                   ) : (
-                    <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-slate-50 dark:bg-slate-900 text-slate-300 group">
-                      <ImageIcon size={24} className="group-hover:opacity-0 transition-opacity duration-200" />
-                      <button
-                        onClick={() => handleSearchImages(item)}
-                        disabled={autoImageLoadingId === item.id}
-                        className="absolute inset-0 flex flex-col items-center justify-center gap-1.5 opacity-0 group-hover:opacity-100 transition-all duration-200 bg-gradient-to-br from-primary/90 to-primary/70 text-white rounded-sm"
-                        title="Auto-find an image for this item"
-                      >
-                        {autoImageLoadingId === item.id ? (
-                          <>
-                            <Loader2 size={20} className="animate-spin" />
-                            <span className="text-[10px] font-semibold">Searching...</span>
-                          </>
-                        ) : (
-                          <>
-                            <Wand2 size={20} />
-                            <span className="text-[10px] font-semibold">Find Image</span>
-                          </>
-                        )}
-                      </button>
+                    <div className="w-full h-full flex flex-col items-center justify-center gap-2 bg-slate-50 dark:bg-slate-900 text-slate-300 group/noimg">
+                      <ImageIcon size={24} className="group-hover/noimg:opacity-0 transition-opacity duration-200" />
+                      <div className="absolute inset-0 flex flex-col items-center justify-center gap-3 opacity-100 sm:opacity-0 sm:group-hover/noimg:opacity-100 transition-all duration-200 bg-black/40 rounded-t-xl z-10">
+                        <div className="flex gap-3">
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              openModal(item);
+                            }}
+                            className="w-10 h-10 bg-white hover:bg-slate-100 text-slate-700 rounded-full flex items-center justify-center shadow-lg transition-transform hover:scale-105"
+                            title="Edit Item"
+                          >
+                            <Edit2 size={18} />
+                          </button>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDelete(item.id);
+                            }}
+                            className="w-10 h-10 bg-red-600 hover:bg-red-700 text-white rounded-full flex items-center justify-center shadow-lg shadow-red-900/20 transition-transform hover:scale-105"
+                            title="Delete Item"
+                          >
+                            <Trash2 size={18} />
+                          </button>
+                        </div>
+                        <button
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleSearchImages(item);
+                          }}
+                          disabled={autoImageLoadingId === item.id}
+                          className="flex items-center justify-center gap-1.5 px-3 py-1.5 bg-primary hover:bg-primary-600 text-white rounded-full text-xs font-semibold shadow-md"
+                          title="Auto-find an image for this item"
+                        >
+                          {autoImageLoadingId === item.id ? (
+                            <>
+                              <Loader2 size={14} className="animate-spin" />
+                              <span>Searching...</span>
+                            </>
+                          ) : (
+                            <>
+                              <Wand2 size={14} />
+                              <span>Find Image</span>
+                            </>
+                          )}
+                        </button>
+                      </div>
                     </div>
                   )}
                   {/* Tags */}
@@ -478,11 +512,11 @@ export function MenuItemsPage() {
                     {item.description || 'No description provided.'}
                   </p>
                   
-                  <div className="pt-2 sm:pt-3 mt-auto border-t border-slate-100 dark:border-slate-800 flex justify-between items-center">
-                    <div className="flex items-center gap-1.5">
+                  <div className="pt-2 sm:pt-3 mt-auto border-t border-slate-100 dark:border-slate-800 flex flex-wrap gap-2 justify-between items-center">
+                    <div className="flex items-center gap-1.5 flex-wrap">
                       <button
                         onClick={() => handleQuickToggle(item, 'is_available')}
-                        className={`text-xs px-2 py-1 rounded font-medium transition-colors ${
+                        className={`text-xs px-2 py-1 rounded font-medium transition-colors whitespace-nowrap ${
                           item.is_available 
                             ? 'bg-green-100 text-green-700 hover:bg-green-200 dark:bg-green-900/30 dark:text-green-400' 
                             : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-400'
@@ -492,7 +526,7 @@ export function MenuItemsPage() {
                       </button>
                       <button
                         onClick={() => handleQuickToggle(item, 'is_bestseller')}
-                        className={`p-1.5 rounded transition-colors ${
+                        className={`p-1.5 rounded transition-colors shrink-0 ${
                           item.is_bestseller 
                             ? 'bg-amber-100 text-amber-600 hover:bg-amber-200 dark:bg-amber-900/30' 
                             : 'bg-slate-100 text-slate-400 hover:bg-slate-200 dark:bg-slate-800'
@@ -503,7 +537,7 @@ export function MenuItemsPage() {
                       </button>
                       <button
                         onClick={() => handleQuickToggle(item, 'is_highlighted')}
-                        className={`p-1.5 rounded transition-colors ${
+                        className={`p-1.5 rounded transition-colors shrink-0 ${
                           item.is_highlighted 
                             ? 'bg-primary/20 text-primary hover:bg-primary/30' 
                             : 'bg-slate-100 text-slate-400 hover:bg-slate-200 dark:bg-slate-800'
@@ -514,12 +548,12 @@ export function MenuItemsPage() {
                       </button>
                     </div>
                     
-                    <div className="flex gap-1">
+                    <div className="flex items-center gap-1 flex-wrap shrink-0">
                       {/* Rating badge */}
                       {item.average_rating && item.average_rating > 0 ? (
                         <button
                           onClick={() => handleViewReviews(item)}
-                          className="p-1.5 flex items-center gap-0.5 text-amber-600 bg-amber-50 hover:bg-amber-100 rounded transition-colors text-xs font-semibold"
+                          className="p-1.5 flex items-center gap-0.5 text-amber-600 bg-amber-50 hover:bg-amber-100 rounded transition-colors text-xs font-semibold shrink-0"
                           title="View Reviews"
                         >
                           <Star size={12} className="fill-amber-500" />
@@ -529,24 +563,12 @@ export function MenuItemsPage() {
                       ) : (
                         <button
                           onClick={() => handleViewReviews(item)}
-                          className="p-1.5 text-slate-400 hover:bg-slate-100 rounded transition-colors"
+                          className="p-1.5 text-slate-400 hover:bg-slate-100 rounded transition-colors shrink-0"
                           title="View Reviews"
                         >
                           <MessageSquare size={14} />
                         </button>
                       )}
-                      <button 
-                        onClick={() => openModal(item)}
-                        className="p-1.5 text-slate-500 hover:bg-slate-100 hover:text-primary rounded transition-colors dark:hover:bg-slate-800"
-                      >
-                        <Edit2 size={16} />
-                      </button>
-                      <button 
-                        onClick={() => handleDelete(item.id)}
-                        className="p-1.5 text-slate-500 hover:bg-red-50 hover:text-red-600 rounded transition-colors dark:hover:bg-red-900/20"
-                      >
-                        <Trash2 size={16} />
-                      </button>
                     </div>
                   </div>
                 </CardContent>
@@ -568,18 +590,24 @@ export function MenuItemsPage() {
           <div className="flex items-center justify-between mb-8 relative max-w-sm mx-auto">
             <div className="absolute left-0 right-0 top-1/2 h-0.5 bg-slate-200 dark:bg-slate-800 -z-10" />
             
-            {[1, 2, 3].map(step => (
-              <div 
-                key={step} 
-                className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-colors ${
-                  currentStep >= step 
-                    ? 'bg-primary text-white ring-4 ring-white dark:ring-slate-950' 
-                    : 'bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400 ring-4 ring-white dark:ring-slate-950'
-                }`}
-              >
-                {step}
-              </div>
-            ))}
+            {[1, 2, 3].map(step => {
+              const isClickable = !!editingItem;
+              return (
+                <button 
+                  key={step} 
+                  type="button"
+                  onClick={() => isClickable && setCurrentStep(step)}
+                  disabled={!isClickable}
+                  className={`w-8 h-8 rounded-full flex items-center justify-center text-sm font-medium transition-all ${
+                    currentStep >= step 
+                      ? 'bg-primary text-white ring-4 ring-white dark:ring-slate-950' 
+                      : 'bg-slate-200 text-slate-500 dark:bg-slate-800 dark:text-slate-400 ring-4 ring-white dark:ring-slate-950'
+                  } ${isClickable ? 'cursor-pointer hover:scale-105 shadow-sm' : 'cursor-default'}`}
+                >
+                  {step}
+                </button>
+              );
+            })}
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
@@ -853,56 +881,73 @@ export function MenuItemsPage() {
                     <span className="flex items-center font-medium text-slate-900 dark:text-white">
                       <ImageIcon size={16} className="mr-2 text-slate-500"/> Product Images
                     </span>
-                    {(!editingItem ? pendingImages.length : (editingItem.images?.length || 0)) < 4 ? (
-                      <label className="cursor-pointer text-xs font-medium bg-primary-50 text-primary-700 hover:bg-primary-100 dark:bg-primary-900/30 dark:text-primary-400 px-3 py-1.5 rounded-full transition-colors">
-                        Upload New
-                        <input 
-                          type="file" 
-                          accept="image/*"
-                          className="hidden"
-                          onChange={async (e) => {
-                            const file = e.target.files?.[0];
-                            if (!file) return;
-
-                            if (editingItem) {
-                              if (editingItem.images && editingItem.images.length >= 4) {
-                                toast.error('Maximum 4 images allowed per item');
-                                return;
+                    <div className="flex gap-2 items-center">
+                      {editingItem && (
+                        <button
+                          type="button"
+                          onClick={() => handleSearchImages(editingItem)}
+                          disabled={autoImageLoadingId === editingItem.id}
+                          className="flex items-center gap-1.5 text-xs font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 px-3 py-1.5 rounded-full transition-colors disabled:opacity-50"
+                        >
+                          {autoImageLoadingId === editingItem.id ? (
+                            <Loader2 size={14} className="animate-spin" />
+                          ) : (
+                            <Wand2 size={14} />
+                          )}
+                          Auto-find
+                        </button>
+                      )}
+                      {(!editingItem ? pendingImages.length : (editingItem.images?.length || 0)) < 4 ? (
+                        <label className="cursor-pointer text-xs font-medium bg-primary-50 text-primary-700 hover:bg-primary-100 dark:bg-primary-900/30 dark:text-primary-400 px-3 py-1.5 rounded-full transition-colors">
+                          Upload New
+                          <input 
+                            type="file" 
+                            accept="image/*"
+                            className="hidden"
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0];
+                              if (!file) return;
+  
+                              if (editingItem) {
+                                if (editingItem.images && editingItem.images.length >= 4) {
+                                  toast.error('Maximum 4 images allowed per item');
+                                  return;
+                                }
+                                
+                                const fd = new FormData();
+                                fd.append('file', file);
+                                fd.append('folder', 'items');
+                                fd.append('item_id', editingItem.id);
+                                fd.append('is_primary', (!editingItem.images || editingItem.images.length === 0) ? 'true' : 'false');
+                                
+                                try {
+                                  const toastId = toast.loading('Uploading image...');
+                                  await api.post('/upload/image', fd, {
+                                    headers: { 'Content-Type': 'multipart/form-data' }
+                                  });
+                                  toast.success('Image uploaded successfully', { id: toastId });
+                                  fetchData();
+                                  const res = await api.get(`/menu-items/${editingItem.id}`);
+                                  setEditingItem(res.data);
+                                } catch (error: any) {
+                                  toast.error(error.response?.data?.detail || 'Failed to upload image');
+                                }
+                              } else {
+                                if (pendingImages.length >= 4) {
+                                  toast.error('Maximum 4 images allowed per item');
+                                  return;
+                                }
+                                setPendingImages([...pendingImages, file]);
                               }
-                              
-                              const fd = new FormData();
-                              fd.append('file', file);
-                              fd.append('folder', 'items');
-                              fd.append('item_id', editingItem.id);
-                              fd.append('is_primary', (!editingItem.images || editingItem.images.length === 0) ? 'true' : 'false');
-                              
-                              try {
-                                const toastId = toast.loading('Uploading image...');
-                                await api.post('/upload/image', fd, {
-                                  headers: { 'Content-Type': 'multipart/form-data' }
-                                });
-                                toast.success('Image uploaded successfully', { id: toastId });
-                                fetchData();
-                                const res = await api.get(`/menu-items/${editingItem.id}`);
-                                setEditingItem(res.data);
-                              } catch (error: any) {
-                                toast.error(error.response?.data?.detail || 'Failed to upload image');
-                              }
-                            } else {
-                              if (pendingImages.length >= 4) {
-                                toast.error('Maximum 4 images allowed per item');
-                                return;
-                              }
-                              setPendingImages([...pendingImages, file]);
-                            }
-                          }}
-                        />
-                      </label>
-                    ) : (
-                      <span className="text-xs font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-full">
-                        Limit Reached (4/4)
-                      </span>
-                    )}
+                            }}
+                          />
+                        </label>
+                      ) : (
+                        <span className="text-xs font-medium text-slate-500 bg-slate-100 dark:bg-slate-800 px-3 py-1.5 rounded-full">
+                          Limit Reached (4/4)
+                        </span>
+                      )}
+                    </div>
                   </div>
                   
                   {editingItem && editingItem.images && editingItem.images.length > 0 ? (

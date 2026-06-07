@@ -377,7 +377,7 @@ export function PublicMenuPage() {
       <div className={`fixed top-0 left-0 right-0 z-50 bg-white/90 backdrop-blur-md shadow-sm border-b border-slate-200 transition-all duration-300 transform ${
         isScrolled ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
       }`}>
-        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center gap-3 transition-all">
+        <div className="max-w-3xl mx-auto px-4 py-3 flex items-center gap-2 sm:gap-3 transition-all overflow-x-auto scrollbar-hide no-scrollbar w-full">
           {/* Small Logo */}
           {!isSearchFocused && (
             <div className="w-10 h-10 rounded-lg overflow-hidden shrink-0 border border-slate-200 bg-white flex items-center justify-center shadow-sm transition-all">
@@ -390,8 +390,10 @@ export function PublicMenuPage() {
           )}
           
           {/* Small Search */}
-          <div className="relative flex-1 transition-all duration-300">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4" />
+          <div className={`relative transition-all duration-300 overflow-hidden ${isSearchFocused || searchQuery ? 'flex-1' : 'w-10 sm:flex-1 shrink-0'}`}>
+            <Search className={`absolute top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none transition-all duration-300 z-10 ${
+              isSearchFocused || searchQuery ? 'left-3' : 'left-1/2 -translate-x-1/2 sm:left-3 sm:translate-x-0'
+            }`} />
             <input
               type="text"
               placeholder="Search..."
@@ -399,14 +401,17 @@ export function PublicMenuPage() {
               onChange={(e) => setSearchQuery(e.target.value)}
               onFocus={() => setIsSearchFocused(true)}
               onBlur={() => {
-                // Delay hiding slightly to allow clicks on search results/clear button
                 setTimeout(() => {
                   if (!searchQuery) {
                     setIsSearchFocused(false);
                   }
                 }, 200);
               }}
-              className="w-full h-10 pl-9 pr-8 rounded-lg bg-white border border-slate-200 shadow-sm focus:outline-none focus:ring-2 transition-all text-sm"
+              className={`w-full h-10 rounded-lg bg-white border border-slate-200 shadow-sm focus:outline-none focus:ring-2 transition-all duration-300 text-sm ${
+                isSearchFocused || searchQuery
+                  ? 'pl-9 pr-8 text-slate-900 placeholder-slate-400' 
+                  : 'pl-9 pr-8 text-transparent sm:text-slate-900 placeholder-transparent sm:placeholder-slate-400 cursor-pointer sm:cursor-text'
+              }`}
               style={{ '--tw-ring-color': primaryColor } as any}
             />
             {searchQuery && (
@@ -415,7 +420,7 @@ export function PublicMenuPage() {
                   setSearchQuery('');
                   setIsSearchFocused(false);
                 }}
-                className="absolute right-3 top-1/2 -translate-y-1/2 opacity-40 hover:opacity-100"
+                className="absolute right-3 top-1/2 -translate-y-1/2 opacity-40 hover:opacity-100 z-10"
               >
                 <X size={14} />
               </button>
@@ -579,9 +584,11 @@ export function PublicMenuPage() {
         </div>
 
         {/* Search & View Toggle */}
-        <div className="flex items-center gap-2 sm:gap-3 mb-3 transition-all">
-          <div className="relative flex-1 transition-all duration-300">
-            <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 opacity-40" />
+        <div className="flex items-center gap-2 sm:gap-3 mb-3 transition-all overflow-x-auto scrollbar-hide no-scrollbar w-full">
+          <div className={`relative transition-all duration-300 overflow-hidden ${isSearchFocused || searchQuery ? 'flex-1' : 'w-12 sm:flex-1 shrink-0'}`}>
+            <Search className={`absolute top-1/2 -translate-y-1/2 text-slate-400 w-5 h-5 pointer-events-none transition-all duration-300 z-10 ${
+              isSearchFocused || searchQuery ? 'left-4' : 'left-1/2 -translate-x-1/2 sm:left-4 sm:translate-x-0'
+            }`} />
             <input
               type="text"
               placeholder="Search for a dish..."
@@ -595,7 +602,11 @@ export function PublicMenuPage() {
                   }
                 }, 200);
               }}
-              className="w-full h-12 pl-12 pr-10 rounded-full border shadow-sm focus:outline-none focus:ring-2 transition-all bg-white border-slate-200 text-slate-900 placeholder-slate-400 text-sm sm:text-base"
+              className={`w-full h-12 rounded-full border shadow-sm focus:outline-none focus:ring-2 transition-all duration-300 bg-white border-slate-200 text-sm sm:text-base ${
+                isSearchFocused || searchQuery
+                  ? 'pl-12 pr-10 text-slate-900 placeholder-slate-400' 
+                  : 'pl-12 pr-10 text-transparent sm:text-slate-900 placeholder-transparent sm:placeholder-slate-400 cursor-pointer sm:cursor-text'
+              }`}
               style={{ '--tw-ring-color': primaryColor } as any}
             />
             {searchQuery && (
@@ -604,7 +615,7 @@ export function PublicMenuPage() {
                   setSearchQuery('');
                   setIsSearchFocused(false);
                 }}
-                className="absolute right-4 top-1/2 -translate-y-1/2 opacity-40 hover:opacity-100"
+                className="absolute right-4 top-1/2 -translate-y-1/2 opacity-40 hover:opacity-100 z-10"
               >
                 <X size={16} />
               </button>
