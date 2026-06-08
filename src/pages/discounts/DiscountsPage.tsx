@@ -71,6 +71,8 @@ const defaultForm = {
   target_ids: [] as string[],
   start_date: '',
   end_date: '',
+  available_days: [] as string[],
+  available_time_presets: [] as string[],
   is_active: true,
   members_only: false,
 };
@@ -78,6 +80,18 @@ const defaultForm = {
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function DiscountsPage() {
+  const formatDays = (days: string[]) => {
+    if (!days || days.length === 0) return '';
+    const dayOrder = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const sortedDays = [...days].sort((a, b) => dayOrder.indexOf(a) - dayOrder.indexOf(b));
+    
+    if (sortedDays.length === 7) return 'Everyday';
+    if (sortedDays.length === 5 && sortedDays.join(',') === 'Mon,Tue,Wed,Thu,Fri') return 'Weekdays';
+    if (sortedDays.length === 2 && sortedDays.join(',') === 'Sat,Sun') return 'Weekends';
+    
+    return sortedDays.join(', ');
+  };
+
   const { shop } = useShopStore();
   const currencySymbol = shop?.settings?.currency || '₹';
 
@@ -88,6 +102,7 @@ export function DiscountsPage() {
   const [isLoading, setIsLoading] = useState(true);
 
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [currentStep, setCurrentStep] = useState(1);
   const [editingDiscount, setEditingDiscount] = useState<Discount | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [formData, setFormData] = useState(defaultForm);
@@ -95,6 +110,8 @@ export function DiscountsPage() {
   const [isDeleting, setIsDeleting] = useState(false);
   const [isFabOpen, setIsFabOpen] = useState(false);
   const [modalCategory, setModalCategory] = useState<'discount' | 'combo'>('discount');
+  const [itemSearchQuery, setItemSearchQuery] = useState('');
+  const [rewardSearchQuery, setRewardSearchQuery] = useState('');
 
   useEffect(() => {
     fetchAll();
@@ -151,6 +168,8 @@ export function DiscountsPage() {
         end_date: targetDiscount.end_date
           ? new Date(targetDiscount.end_date).toISOString().slice(0, 16)
           : '',
+        available_days: targetDiscount.available_days || [],
+        available_time_presets: targetDiscount.available_time_presets || [],
         is_active: targetDiscount.is_active,
         members_only: targetDiscount.members_only || false,
       });
@@ -164,6 +183,9 @@ export function DiscountsPage() {
         applies_to: (type === 'bogo' || type === 'combo') ? 'items' : 'all'
       });
     }
+    setItemSearchQuery('');
+    setRewardSearchQuery('');
+    setCurrentStep(1);
     setIsModalOpen(true);
   };
 
@@ -193,6 +215,8 @@ export function DiscountsPage() {
         description: formData.description || null,
         start_date: formData.start_date ? new Date(formData.start_date).toISOString() : null,
         end_date: formData.end_date ? new Date(formData.end_date).toISOString() : null,
+        available_days: formData.available_days.length > 0 ? formData.available_days : null,
+        available_time_presets: formData.available_time_presets.length > 0 ? formData.available_time_presets : null,
         target_ids: formData.applies_to === 'all' ? null : formData.target_ids,
       };
 
@@ -380,8 +404,8 @@ export function DiscountsPage() {
                       </span>
                       <span className="flex items-center gap-1 sm:gap-1.5 bg-slate-50 px-2 py-1 rounded-md border border-slate-100">
                         {d.applies_to === 'all' && <><ShoppingBag size={12} className="text-slate-400" /> All items</>}
-                        {d.applies_to === 'category' && <><Layers size={12} className="text-slate-400" /> {(d.target_ids?.length || 0)} categor{(d.target_ids?.length || 0) === 1 ? 'y' : 'ies'}</>}
-                        {d.applies_to === 'items' && <><Tag size={12} className="text-slate-400" /> {(d.target_ids?.length || 0)} item{(d.target_ids?.length || 0) === 1 ? '' : 's'}</>}
+                        {d.applies_to === 'category' && <><Layers size={12} className="text-slate-400" /> {(d.target_ids?.length || 0)} categor{(d.target_ids?.length === 1) ? 'y' : 'ies'}</>}
+                        {d.applies_to === 'items' && <><Tag size={12} className="text-slate-400" /> {(d.target_ids?.length || 0)} item{(d.target_ids?.length === 1) ? '' : 's'}</>}
                       </span>
                       {(d.start_date || d.end_date) && (
                         <span className="flex items-center gap-1 sm:gap-1.5 text-slate-400 mt-0.5 sm:mt-0 w-full sm:w-auto font-medium">
@@ -389,6 +413,18 @@ export function DiscountsPage() {
                           {d.start_date ? formatDateTime(d.start_date) : 'Now'}
                           {' → '}
                           {d.end_date ? formatDateTime(d.end_date) : 'No end'}
+                        </span>
+                      )}
+                      {(d.available_days && d.available_days.length > 0) && (
+                        <span className="flex items-center gap-1 sm:gap-1.5 text-slate-400 mt-0.5 sm:mt-0 w-full sm:w-auto font-medium">
+                          <Calendar size={12} />
+                          {formatDays(d.available_days)}
+                        </span>
+                      )}
+                      {(d.available_time_presets && d.available_time_presets.length > 0) && (
+                        <span className="flex items-center gap-1 sm:gap-1.5 text-slate-400 mt-0.5 sm:mt-0 w-full sm:w-auto font-medium">
+                          <Clock size={12} />
+                          {d.available_time_presets.join(', ')}
                         </span>
                       )}
                     </div>
@@ -436,328 +472,457 @@ export function DiscountsPage() {
         title={editingDiscount ? 'Edit Offer' : 'Create New Offer'}
         className="max-w-lg"
       >
-        <form onSubmit={handleSubmit} className="mt-4 space-y-5">
-          {/* Title */}
-          <Input
-            label="Offer Title *"
-            value={formData.title}
-            onChange={e => setFormData({ ...formData, title: e.target.value })}
-            placeholder="e.g. Weekend Special 20% Off"
-            required
-          />
-
-          {/* Description */}
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-              Description (shown on banner)
-            </label>
-            <textarea
-              value={formData.description}
-              onChange={e => setFormData({ ...formData, description: e.target.value })}
-              placeholder="e.g. Enjoy 20% off on all items this weekend only!"
-              className="flex w-full rounded-xl border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:bg-slate-900 min-h-[80px] resize-y"
-            />
+        <form onSubmit={e => {
+          e.preventDefault();
+          if (currentStep < 3) {
+            setCurrentStep(currentStep + 1);
+          }
+        }} className="mt-2 flex flex-col h-[450px] sm:h-[500px]">
+          {/* Step Indicator */}
+          <div className="flex items-center justify-between mb-6">
+            <div className="flex items-center gap-2">
+              <button type="button" onClick={() => setCurrentStep(1)} className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-all ${currentStep === 1 ? 'bg-primary text-white shadow-md scale-110' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>1</button>
+              <div className={`w-12 h-1 rounded-full ${currentStep > 1 ? 'bg-primary' : 'bg-slate-100'}`} />
+              <button type="button" onClick={() => setCurrentStep(2)} className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-all ${currentStep === 2 ? 'bg-primary text-white shadow-md scale-110' : currentStep > 2 ? 'bg-primary text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>2</button>
+              <div className={`w-12 h-1 rounded-full ${currentStep > 2 ? 'bg-primary' : 'bg-slate-100'}`} />
+              <button type="button" onClick={() => setCurrentStep(3)} className={`w-8 h-8 rounded-full flex items-center justify-center font-bold text-sm transition-all ${currentStep === 3 ? 'bg-primary text-white shadow-md scale-110' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}>3</button>
+            </div>
+            <span className="text-sm font-medium text-slate-500">
+              {currentStep === 1 ? 'Basics' : currentStep === 2 ? 'Details' : 'Availability'}
+            </span>
           </div>
 
-          {/* Offer Type */}
-          <div className="space-y-1.5">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Offer Type *</label>
-            <div className="grid grid-cols-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl gap-1">
-              {(modalCategory === 'discount' ? ['percentage', 'flat'] : ['bogo', 'combo'] as const).map(type => (
-                <button
-                  key={type}
-                  type="button"
-                  onClick={() => setFormData({ ...formData, discount_type: type as any, applies_to: (type === 'bogo' || type === 'combo') ? 'items' : formData.applies_to })}
-                  className={`py-2 rounded-lg text-xs font-semibold flex flex-col items-center justify-center gap-1 transition-colors ${
-                    formData.discount_type === type
-                      ? 'bg-white shadow text-slate-900 dark:bg-slate-700 dark:text-white'
-                      : 'text-slate-500 hover:text-slate-800'
-                  }`}
-                >
-                  {type === 'percentage' && <Percent size={14} />}
-                  {type === 'flat' && <span className="font-semibold text-sm">{currencySymbol}</span>}
-                  {type === 'bogo' && <Sparkles size={14} />}
-                  {type === 'combo' && <Layers size={14} />}
-                  
-                  {type === 'percentage' && 'Percentage'}
-                  {type === 'flat' && 'Flat Amount'}
-                  {type === 'bogo' && 'BOGO'}
-                  {type === 'combo' && 'Combo'}
-                </button>
-              ))}
-            </div>
-          </div>
+          <div className="flex-1 overflow-y-auto px-1 space-y-5 no-scrollbar pb-4">
+            {/* Step 1: Basics */}
+            {currentStep === 1 && (
+              <>
+                <Input
+                  label="Offer Title *"
+                  value={formData.title}
+                  onChange={e => setFormData({ ...formData, title: e.target.value })}
+                  placeholder="e.g. Weekend Special 20% Off"
+                  required
+                />
 
-          {/* Conditional Inputs based on type */}
-          {['percentage', 'flat'].includes(formData.discount_type) && (
-            <Input
-              label={formData.discount_type === 'percentage' ? 'Percentage (%) *' : `Amount (${currencySymbol}) *`}
-              type="number"
-              step="0.01"
-              min="0"
-              max={formData.discount_type === 'percentage' ? '100' : undefined}
-              value={formData.discount_value}
-              onChange={e => setFormData({ ...formData, discount_value: e.target.value })}
-              placeholder={formData.discount_type === 'percentage' ? '10' : '50'}
-              required={['percentage', 'flat'].includes(formData.discount_type)}
-            />
-          )}
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                    Description (shown on banner)
+                  </label>
+                  <textarea
+                    value={formData.description}
+                    onChange={e => setFormData({ ...formData, description: e.target.value })}
+                    placeholder="e.g. Enjoy 20% off on all items this weekend only!"
+                    className="flex w-full rounded-xl border border-input bg-transparent px-3 py-2 text-sm shadow-sm transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring dark:bg-slate-900 min-h-[80px] resize-y"
+                  />
+                </div>
 
-          {formData.discount_type === 'bogo' && (
-            <div className="grid grid-cols-2 gap-3 p-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/30 rounded-xl">
-              <Input
-                label="Buy Quantity *"
-                type="number"
-                min="1"
-                value={formData.buy_quantity}
-                onChange={e => setFormData({ ...formData, buy_quantity: e.target.value })}
-                placeholder="e.g. 2"
-                required={formData.discount_type === 'bogo'}
-              />
-              <Input
-                label="Get Quantity (Free) *"
-                type="number"
-                min="1"
-                value={formData.get_quantity}
-                onChange={e => setFormData({ ...formData, get_quantity: e.target.value })}
-                placeholder="e.g. 1"
-                required={formData.discount_type === 'bogo'}
-              />
-            </div>
-          )}
-
-          {formData.discount_type === 'combo' && (
-            <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/30 rounded-xl">
-              <Input
-                label={`Combo Price (${currencySymbol}) *`}
-                type="number"
-                step="0.01"
-                min="0"
-                value={formData.discount_value}
-                onChange={e => setFormData({ ...formData, discount_value: e.target.value })}
-                placeholder="e.g. 499"
-                required={formData.discount_type === 'combo'}
-              />
-            </div>
-          )}
-
-          {/* Applies To */}
-          <div className="space-y-3">
-            <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
-              {formData.discount_type === 'bogo' ? 'Buy these items (Required Purchase) *' : 'Applies To'}
-            </label>
-            <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl gap-1">
-              {([
-                { v: 'all', label: 'All Items', icon: <ShoppingBag size={13} /> },
-                { v: 'category', label: 'Categories', icon: <Layers size={13} /> },
-                { v: 'items', label: 'Items', icon: <Tag size={13} /> },
-              ] as const).map(opt => (
-                <button
-                  key={opt.v}
-                  type="button"
-                  onClick={() => setFormData({ ...formData, applies_to: opt.v, target_ids: [] })}
-                  className={`flex-1 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors ${
-                    formData.applies_to === opt.v
-                      ? 'bg-white shadow text-slate-900 dark:bg-slate-700 dark:text-white'
-                      : 'text-slate-500 hover:text-slate-800'
-                  }`}
-                >
-                  {opt.icon} {opt.label}
-                </button>
-              ))}
-            </div>
-
-            {/* Category selector */}
-            {formData.applies_to === 'category' && (
-              <div className="flex flex-wrap gap-2 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 max-h-40 overflow-y-auto">
-                {categories.length === 0 ? (
-                  <p className="text-xs text-slate-500">No categories found</p>
-                ) : categories.map(cat => (
-                  <button
-                    key={cat.id}
-                    type="button"
-                    onClick={() => toggleTargetId(cat.id)}
-                    className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
-                      formData.target_ids.includes(cat.id)
-                        ? 'bg-primary text-white shadow-sm'
-                        : 'bg-white text-slate-600 border border-slate-200 hover:border-primary/50'
-                    }`}
-                  >
-                    {formData.target_ids.includes(cat.id) && <X size={10} />}
-                    {cat.name}
-                  </button>
-                ))}
-              </div>
+                <div className="space-y-1.5">
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Offer Type *</label>
+                  <div className="grid grid-cols-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl gap-1">
+                    {(modalCategory === 'discount' ? ['percentage', 'flat'] : ['bogo', 'combo'] as const).map(type => (
+                      <button
+                        key={type}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, discount_type: type as any, applies_to: (type === 'bogo' || type === 'combo') ? 'items' : formData.applies_to })}
+                        className={`py-2 rounded-lg text-xs font-semibold flex flex-col items-center justify-center gap-1 transition-colors ${
+                          formData.discount_type === type
+                            ? 'bg-white shadow text-slate-900 dark:bg-slate-700 dark:text-white'
+                            : 'text-slate-500 hover:text-slate-800'
+                        }`}
+                      >
+                        {type === 'percentage' && <Percent size={14} />}
+                        {type === 'flat' && <span className="font-semibold text-sm">{currencySymbol}</span>}
+                        {type === 'bogo' && <Sparkles size={14} />}
+                        {type === 'combo' && <Layers size={14} />}
+                        
+                        {type === 'percentage' && 'Percentage'}
+                        {type === 'flat' && 'Flat Amount'}
+                        {type === 'bogo' && 'BOGO'}
+                        {type === 'combo' && 'Combo'}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              </>
             )}
 
-            {/* Item selector */}
-            {formData.applies_to === 'items' && (
-              <div className="flex flex-col gap-1 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 max-h-48 overflow-y-auto">
-                {menuItems.length === 0 ? (
-                  <p className="text-xs text-slate-500">No items found</p>
-                ) : menuItems.map(item => (
-                  <label
-                    key={item.id}
-                    className={`flex items-center gap-2.5 p-2 rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors ${
-                      formData.target_ids.includes(item.id) ? 'bg-primary/5' : ''
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={formData.target_ids.includes(item.id)}
-                      onChange={() => toggleTargetId(item.id)}
-                      className="w-4 h-4 rounded accent-primary"
+            {/* Step 2: Details */}
+            {currentStep === 2 && (
+              <>
+                {['percentage', 'flat'].includes(formData.discount_type) && (
+                  <Input
+                    label={formData.discount_type === 'percentage' ? 'Percentage (%) *' : `Amount (${currencySymbol}) *`}
+                    type="number"
+                    step="0.01"
+                    min="0"
+                    max={formData.discount_type === 'percentage' ? '100' : undefined}
+                    value={formData.discount_value}
+                    onChange={e => setFormData({ ...formData, discount_value: e.target.value })}
+                    placeholder={formData.discount_type === 'percentage' ? '10' : '50'}
+                    required={['percentage', 'flat'].includes(formData.discount_type)}
+                  />
+                )}
+
+                {formData.discount_type === 'bogo' && (
+                  <div className="grid grid-cols-2 gap-3 p-3 bg-indigo-50 dark:bg-indigo-900/20 border border-indigo-100 dark:border-indigo-800/30 rounded-xl">
+                    <Input
+                      label="Buy Quantity *"
+                      type="number"
+                      min="1"
+                      value={formData.buy_quantity}
+                      onChange={e => setFormData({ ...formData, buy_quantity: e.target.value })}
+                      placeholder="e.g. 2"
+                      required={formData.discount_type === 'bogo'}
                     />
-                    <span className="text-sm text-slate-700 dark:text-slate-300 line-clamp-1">{item.name}</span>
-                    <span className="ml-auto text-xs text-slate-400">{currencySymbol}{item.price}</span>
+                    <Input
+                      label="Get Quantity (Free) *"
+                      type="number"
+                      min="1"
+                      value={formData.get_quantity}
+                      onChange={e => setFormData({ ...formData, get_quantity: e.target.value })}
+                      placeholder="e.g. 1"
+                      required={formData.discount_type === 'bogo'}
+                    />
+                  </div>
+                )}
+
+                {formData.discount_type === 'combo' && (
+                  <div className="p-3 bg-emerald-50 dark:bg-emerald-900/20 border border-emerald-100 dark:border-emerald-800/30 rounded-xl">
+                    <Input
+                      label={`Combo Price (${currencySymbol}) *`}
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={formData.discount_value}
+                      onChange={e => setFormData({ ...formData, discount_value: e.target.value })}
+                      placeholder="e.g. 499"
+                      required={formData.discount_type === 'combo'}
+                    />
+                  </div>
+                )}
+
+                <div className="space-y-3">
+                  <label className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                    {formData.discount_type === 'bogo' ? 'Buy these items (Required Purchase) *' : 'Applies To'}
                   </label>
-                ))}
-              </div>
+                  <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl gap-1">
+                    {([
+                      { v: 'all', label: 'All Items', icon: <ShoppingBag size={13} /> },
+                      { v: 'category', label: 'Categories', icon: <Layers size={13} /> },
+                      { v: 'items', label: 'Items', icon: <Tag size={13} /> },
+                    ] as const).map(opt => (
+                      <button
+                        key={opt.v}
+                        type="button"
+                        onClick={() => setFormData({ ...formData, applies_to: opt.v, target_ids: [] })}
+                        className={`flex-1 py-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-colors ${
+                          formData.applies_to === opt.v
+                            ? 'bg-white shadow text-slate-900 dark:bg-slate-700 dark:text-white'
+                            : 'text-slate-500 hover:text-slate-800'
+                        }`}
+                      >
+                        {opt.icon} {opt.label}
+                      </button>
+                    ))}
+                  </div>
+
+                  {formData.applies_to === 'category' && (
+                    <div className="flex flex-wrap gap-2 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700 max-h-40 overflow-y-auto">
+                      {categories.length === 0 ? (
+                        <p className="text-xs text-slate-500">No categories found</p>
+                      ) : categories.map(cat => (
+                        <button
+                          key={cat.id}
+                          type="button"
+                          onClick={() => toggleTargetId(cat.id)}
+                          className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-xs font-medium transition-all ${
+                            formData.target_ids.includes(cat.id)
+                              ? 'bg-primary text-white shadow-sm'
+                              : 'bg-white text-slate-600 border border-slate-200 hover:border-primary/50'
+                          }`}
+                        >
+                          {formData.target_ids.includes(cat.id) && <X size={10} />}
+                          {cat.name}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+
+                  {formData.applies_to === 'items' && (
+                    <div className="flex flex-col gap-2 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">
+                      <div className="relative">
+                        <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input
+                          type="text"
+                          placeholder="Search items..."
+                          value={itemSearchQuery}
+                          onChange={e => setItemSearchQuery(e.target.value)}
+                          className="w-full pl-8 pr-3 py-1.5 text-sm rounded-lg border border-slate-200 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 dark:bg-slate-900 dark:border-slate-700"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1 max-h-48 overflow-y-auto pr-1">
+                        {menuItems.length === 0 ? (
+                          <p className="text-xs text-slate-500">No items found</p>
+                        ) : menuItems.filter(i => i.name.toLowerCase().includes(itemSearchQuery.toLowerCase())).map(item => (
+                          <label
+                            key={item.id}
+                            className={`flex items-center gap-2.5 p-2 rounded-lg cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors ${
+                              formData.target_ids.includes(item.id) ? 'bg-primary/5' : ''
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={formData.target_ids.includes(item.id)}
+                              onChange={() => toggleTargetId(item.id)}
+                              className="w-4 h-4 rounded accent-primary"
+                            />
+                            <span className="text-sm text-slate-700 dark:text-slate-300 line-clamp-1">{item.name}</span>
+                            <span className="ml-auto text-xs text-slate-400">{currencySymbol}{item.price}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
+
+                {formData.discount_type === 'bogo' && (
+                  <div className="space-y-3 pt-2">
+                    <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Get these items (Reward) *</label>
+                    <div className="flex flex-col gap-2 p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-100 dark:border-indigo-800/30">
+                      <div className="relative">
+                        <Search size={14} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+                        <input
+                          type="text"
+                          placeholder="Search items..."
+                          value={rewardSearchQuery}
+                          onChange={e => setRewardSearchQuery(e.target.value)}
+                          className="w-full pl-8 pr-3 py-1.5 text-sm rounded-lg border border-indigo-200 bg-white shadow-sm focus:outline-none focus:ring-2 focus:ring-indigo-500/20 dark:bg-slate-900 dark:border-indigo-800"
+                        />
+                      </div>
+                      <div className="flex flex-col gap-1 max-h-48 overflow-y-auto pr-1">
+                        {menuItems.length === 0 ? (
+                          <p className="text-xs text-slate-500">No items found</p>
+                        ) : menuItems.filter(i => i.name.toLowerCase().includes(rewardSearchQuery.toLowerCase())).map(item => (
+                          <label
+                            key={`reward-${item.id}`}
+                            className={`flex items-center gap-2.5 p-2 rounded-lg cursor-pointer hover:bg-indigo-100/50 dark:hover:bg-indigo-800/30 transition-colors ${
+                              formData.reward_target_ids.includes(item.id) ? 'bg-indigo-100 dark:bg-indigo-800/50' : ''
+                            }`}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={formData.reward_target_ids.includes(item.id)}
+                              onChange={() => {
+                                const newTargets = formData.reward_target_ids.includes(item.id)
+                                  ? formData.reward_target_ids.filter(id => id !== item.id)
+                                  : [...formData.reward_target_ids, item.id];
+                                setFormData({ ...formData, reward_target_ids: newTargets });
+                              }}
+                              className="w-4 h-4 rounded accent-indigo-600"
+                            />
+                            <span className="text-sm text-slate-700 dark:text-slate-300 line-clamp-1">{item.name}</span>
+                            <span className="ml-auto text-xs text-slate-400">{currencySymbol}{item.price}</span>
+                          </label>
+                        ))}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                <label className="flex items-center justify-between p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors mt-4">
+                  <div>
+                    <p className="text-sm font-medium text-slate-900 dark:text-white flex items-center gap-1.5">
+                      <Crown size={16} className="text-purple-500" /> Members Only
+                    </p>
+                    <p className="text-xs text-slate-500">Only visible to registered and logged-in members</p>
+                  </div>
+                  <div
+                    onClick={() => setFormData({ ...formData, members_only: !formData.members_only })}
+                    className={`w-12 h-6 rounded-full relative transition-colors duration-200 ${formData.members_only ? 'bg-purple-500' : 'bg-slate-300 dark:bg-slate-600'}`}
+                  >
+                    <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${formData.members_only ? 'translate-x-6' : ''}`} />
+                  </div>
+                </label>
+              </>
+            )}
+
+            {/* Step 3: Availability */}
+            {currentStep === 3 && (
+              <>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div className="space-y-2 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">
+                    <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 mb-1.5">
+                      <Calendar size={14} className="text-primary" /> Start Date
+                    </label>
+                    <div className="flex flex-col gap-2">
+                      <input
+                        type="date"
+                        value={formData.start_date ? formData.start_date.split('T')[0] : ''}
+                        onChange={e => {
+                          const d = e.target.value;
+                          if (!d) setFormData({ ...formData, start_date: '' });
+                          else {
+                            const t = formData.start_date ? formData.start_date.split('T')[1] || '00:00' : '00:00';
+                            setFormData({ ...formData, start_date: `${d}T${t}` });
+                          }
+                        }}
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all dark:bg-slate-900 dark:border-slate-700"
+                      />
+                      <input
+                        type="time"
+                        value={formData.start_date ? formData.start_date.split('T')[1] || '' : ''}
+                        onChange={e => {
+                          const t = e.target.value;
+                          if (!t) return;
+                          const d = formData.start_date ? formData.start_date.split('T')[0] : new Date().toISOString().split('T')[0];
+                          setFormData({ ...formData, start_date: `${d}T${t}` });
+                        }}
+                        disabled={!formData.start_date}
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all dark:bg-slate-900 dark:border-slate-700 disabled:opacity-50 disabled:bg-slate-100"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="space-y-2 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">
+                    <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 mb-1.5">
+                      <Clock size={14} className="text-amber-500" /> End Date
+                    </label>
+                    <div className="flex flex-col gap-2">
+                      <input
+                        type="date"
+                        value={formData.end_date ? formData.end_date.split('T')[0] : ''}
+                        onChange={e => {
+                          const d = e.target.value;
+                          if (!d) setFormData({ ...formData, end_date: '' });
+                          else {
+                            const t = formData.end_date ? formData.end_date.split('T')[1] || '00:00' : '00:00';
+                            setFormData({ ...formData, end_date: `${d}T${t}` });
+                          }
+                        }}
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all dark:bg-slate-900 dark:border-slate-700"
+                      />
+                      <input
+                        type="time"
+                        value={formData.end_date ? formData.end_date.split('T')[1] || '' : ''}
+                        onChange={e => {
+                          const t = e.target.value;
+                          if (!t) return;
+                          const d = formData.end_date ? formData.end_date.split('T')[0] : new Date().toISOString().split('T')[0];
+                          setFormData({ ...formData, end_date: `${d}T${t}` });
+                        }}
+                        disabled={!formData.end_date}
+                        className="w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all dark:bg-slate-900 dark:border-slate-700 disabled:opacity-50 disabled:bg-slate-100"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">Available Days</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => {
+                      const isSelected = formData.available_days.includes(day);
+                      return (
+                        <button
+                          key={day}
+                          type="button"
+                          onClick={() => {
+                            if (isSelected) {
+                              setFormData({ ...formData, available_days: formData.available_days.filter(d => d !== day) });
+                            } else {
+                              setFormData({ ...formData, available_days: [...formData.available_days, day] });
+                            }
+                          }}
+                          className={`w-11 h-11 rounded-xl text-xs font-medium transition-colors border flex items-center justify-center ${
+                            isSelected 
+                              ? 'bg-primary border-primary text-white shadow-sm' 
+                              : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'
+                          }`}
+                        >
+                          {day}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-slate-500 mt-2">Leave all unchecked if available every day.</p>
+                </div>
+
+                <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
+                  <h4 className="text-sm font-medium text-slate-700 dark:text-slate-300 mb-3">Timing Presets</h4>
+                  <div className="flex flex-wrap gap-2">
+                    {[
+                      { id: 'Early Morning', label: 'Early Morning (04:00 - 08:00)' },
+                      { id: 'Morning', label: 'Morning (08:00 - 12:00)' },
+                      { id: 'Afternoon', label: 'Afternoon (12:00 - 16:00)' },
+                      { id: 'Evening', label: 'Evening (16:00 - 20:00)' },
+                      { id: 'Night', label: 'Night (20:00 - 00:00)' },
+                      { id: 'Mid-night', label: 'Mid-night (00:00 - 04:00)' }
+                    ].map(preset => {
+                      const isSelected = formData.available_time_presets.includes(preset.id);
+                      return (
+                        <button
+                          key={preset.id}
+                          type="button"
+                          onClick={() => {
+                            if (isSelected) {
+                              setFormData({ ...formData, available_time_presets: formData.available_time_presets.filter(p => p !== preset.id) });
+                            } else {
+                              setFormData({ ...formData, available_time_presets: [...formData.available_time_presets, preset.id] });
+                            }
+                          }}
+                          className={`px-3 py-1.5 rounded-full text-xs font-medium transition-colors border ${
+                            isSelected 
+                              ? 'bg-primary border-primary text-white' 
+                              : 'bg-white border-slate-200 text-slate-600 hover:border-slate-300 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'
+                          }`}
+                        >
+                          {preset.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <p className="text-xs text-slate-500 mt-2">Leave all unchecked if available all day.</p>
+                </div>
+
+                <label className="flex items-center justify-between p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors mt-2">
+                  <div>
+                    <p className="text-sm font-medium text-slate-900 dark:text-white">Enable Offer</p>
+                    <p className="text-xs text-slate-500">Publish this offer to the public menu now</p>
+                  </div>
+                  <div
+                    onClick={() => setFormData({ ...formData, is_active: !formData.is_active })}
+                    className={`w-12 h-6 rounded-full relative transition-colors duration-200 ${formData.is_active ? 'bg-primary' : 'bg-slate-300 dark:bg-slate-600'}`}
+                  >
+                    <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${formData.is_active ? 'translate-x-6' : ''}`} />
+                  </div>
+                </label>
+              </>
             )}
           </div>
 
-          {/* Reward Item selector (For BOGO) */}
-          {formData.discount_type === 'bogo' && (
-            <div className="space-y-3 pt-2">
-              <label className="text-sm font-medium text-slate-700 dark:text-slate-300">Get these items (Reward) *</label>
-              <div className="flex flex-col gap-1 p-3 bg-indigo-50 dark:bg-indigo-900/20 rounded-xl border border-indigo-100 dark:border-indigo-800/30 max-h-48 overflow-y-auto">
-                {menuItems.length === 0 ? (
-                  <p className="text-xs text-slate-500">No items found</p>
-                ) : menuItems.map(item => (
-                  <label
-                    key={`reward-${item.id}`}
-                    className={`flex items-center gap-2.5 p-2 rounded-lg cursor-pointer hover:bg-indigo-100/50 dark:hover:bg-indigo-800/30 transition-colors ${
-                      formData.reward_target_ids.includes(item.id) ? 'bg-indigo-100 dark:bg-indigo-800/50' : ''
-                    }`}
-                  >
-                    <input
-                      type="checkbox"
-                      checked={formData.reward_target_ids.includes(item.id)}
-                      onChange={() => {
-                        const newTargets = formData.reward_target_ids.includes(item.id)
-                          ? formData.reward_target_ids.filter(id => id !== item.id)
-                          : [...formData.reward_target_ids, item.id];
-                        setFormData({ ...formData, reward_target_ids: newTargets });
-                      }}
-                      className="w-4 h-4 rounded accent-indigo-600"
-                    />
-                    <span className="text-sm text-slate-700 dark:text-slate-300 line-clamp-1">{item.name}</span>
-                    <span className="ml-auto text-xs text-slate-400">{currencySymbol}{item.price}</span>
-                  </label>
-                ))}
-              </div>
-            </div>
-          )}
-
-          {/* Date range */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            {/* Start Date */}
-            <div className="space-y-2 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">
-              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 mb-1.5">
-                <Calendar size={14} className="text-primary" /> Start Date
-              </label>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <input
-                  type="date"
-                  value={formData.start_date ? formData.start_date.split('T')[0] : ''}
-                  onChange={e => {
-                    const d = e.target.value;
-                    if (!d) setFormData({ ...formData, start_date: '' });
-                    else {
-                      const t = formData.start_date ? formData.start_date.split('T')[1] || '00:00' : '00:00';
-                      setFormData({ ...formData, start_date: `${d}T${t}` });
-                    }
-                  }}
-                  className="flex-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all dark:bg-slate-900 dark:border-slate-700"
-                />
-                <input
-                  type="time"
-                  value={formData.start_date ? formData.start_date.split('T')[1] || '' : ''}
-                  onChange={e => {
-                    const t = e.target.value;
-                    if (!t) return;
-                    const d = formData.start_date ? formData.start_date.split('T')[0] : new Date().toISOString().split('T')[0];
-                    setFormData({ ...formData, start_date: `${d}T${t}` });
-                  }}
-                  disabled={!formData.start_date}
-                  className="flex-1 sm:flex-none sm:w-32 rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all dark:bg-slate-900 dark:border-slate-700 disabled:opacity-50 disabled:bg-slate-100"
-                />
-              </div>
-            </div>
-
-            {/* End Date */}
-            <div className="space-y-2 p-3 bg-slate-50 dark:bg-slate-800/50 rounded-xl border border-slate-200 dark:border-slate-700">
-              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300 flex items-center gap-1.5 mb-1.5">
-                <Clock size={14} className="text-amber-500" /> End Date
-              </label>
-              <div className="flex flex-col sm:flex-row gap-2">
-                <input
-                  type="date"
-                  value={formData.end_date ? formData.end_date.split('T')[0] : ''}
-                  onChange={e => {
-                    const d = e.target.value;
-                    if (!d) setFormData({ ...formData, end_date: '' });
-                    else {
-                      const t = formData.end_date ? formData.end_date.split('T')[1] || '00:00' : '00:00';
-                      setFormData({ ...formData, end_date: `${d}T${t}` });
-                    }
-                  }}
-                  className="flex-1 w-full rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all dark:bg-slate-900 dark:border-slate-700"
-                />
-                <input
-                  type="time"
-                  value={formData.end_date ? formData.end_date.split('T')[1] || '' : ''}
-                  onChange={e => {
-                    const t = e.target.value;
-                    if (!t) return;
-                    const d = formData.end_date ? formData.end_date.split('T')[0] : new Date().toISOString().split('T')[0];
-                    setFormData({ ...formData, end_date: `${d}T${t}` });
-                  }}
-                  disabled={!formData.end_date}
-                  className="flex-1 sm:flex-none sm:w-32 rounded-lg border border-slate-200 bg-white px-2 py-2 text-sm shadow-sm focus:outline-none focus:ring-2 focus:ring-primary/20 focus:border-primary transition-all dark:bg-slate-900 dark:border-slate-700 disabled:opacity-50 disabled:bg-slate-100"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* Active toggle */}
-          <label className="flex items-center justify-between p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-            <div>
-              <p className="text-sm font-medium text-slate-900 dark:text-white">Enable Offer</p>
-              <p className="text-xs text-slate-500">Publish this offer to the public menu now</p>
-            </div>
-            <div
-              onClick={() => setFormData({ ...formData, is_active: !formData.is_active })}
-              className={`w-12 h-6 rounded-full relative transition-colors duration-200 ${formData.is_active ? 'bg-primary' : 'bg-slate-300 dark:bg-slate-600'}`}
+          <div className="flex justify-between items-center pt-4 mt-6 border-t border-slate-100 dark:border-slate-800">
+            <Button 
+              variant="secondary" 
+              type="button" 
+              onClick={() => {
+                if (currentStep > 1) setCurrentStep(currentStep - 1);
+                else setIsModalOpen(false);
+              }}
             >
-              <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${formData.is_active ? 'translate-x-6' : ''}`} />
-            </div>
-          </label>
-
-          {/* Members Only toggle */}
-          <label className="flex items-center justify-between p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800/50 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors">
-            <div>
-              <p className="text-sm font-medium text-slate-900 dark:text-white flex items-center gap-1.5">
-                <Crown size={16} className="text-purple-500" /> Members Only
-              </p>
-              <p className="text-xs text-slate-500">Only visible to registered and logged-in members</p>
-            </div>
-            <div
-              onClick={() => setFormData({ ...formData, members_only: !formData.members_only })}
-              className={`w-12 h-6 rounded-full relative transition-colors duration-200 ${formData.members_only ? 'bg-purple-500' : 'bg-slate-300 dark:bg-slate-600'}`}
-            >
-              <div className={`absolute top-0.5 left-0.5 w-5 h-5 bg-white rounded-full shadow transition-transform duration-200 ${formData.members_only ? 'translate-x-6' : ''}`} />
-            </div>
-          </label>
-
-          {/* Submit */}
-          <div className="flex justify-end gap-3 pt-2">
-            <Button type="button" variant="secondary" onClick={() => setIsModalOpen(false)}>
-              Cancel
+              {currentStep > 1 ? 'Back' : 'Cancel'}
             </Button>
-            <Button type="submit" isLoading={isSubmitting}>
-              {editingDiscount ? 'Update Offer' : 'Create Offer'}
-            </Button>
+            
+            {currentStep < 3 ? (
+              <Button 
+                type="submit"
+              >
+                Next Step
+              </Button>
+            ) : (
+              <Button type="button" onClick={handleSubmit} isLoading={isSubmitting}>
+                {editingDiscount ? 'Update Offer' : 'Create Offer'}
+              </Button>
+            )}
           </div>
         </form>
       </Modal>

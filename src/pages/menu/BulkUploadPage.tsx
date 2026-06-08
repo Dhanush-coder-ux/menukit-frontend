@@ -11,7 +11,7 @@ interface ParsedItem {
   name: string;
   description: string;
   price: number;
-  food_type: string;
+  food_types: string[];
   selected: boolean;
 }
 
@@ -254,14 +254,16 @@ export function BulkUploadPage() {
                       </td>
                       <td className="px-4 py-3">
                         <select
-                          value={item.food_type}
-                          onChange={(e) => handleItemChange(idx, 'food_type', e.target.value)}
+                          value={item.food_types[0] || 'veg'}
+                          onChange={(e) => handleItemChange(idx, 'food_types', [e.target.value])}
                           className="w-full bg-transparent text-sm border border-transparent hover:border-slate-300 focus:border-primary focus:ring-1 focus:ring-primary rounded px-1 py-1 transition-colors"
                         >
                           <option value="veg">Veg</option>
                           <option value="non-veg">Non-Veg</option>
                           <option value="egg">Egg</option>
                           <option value="drink">Drink</option>
+                          <option value="none">None</option>
+                          <option value="dessert">Dessert</option>
                         </select>
                       </td>
                     </tr>

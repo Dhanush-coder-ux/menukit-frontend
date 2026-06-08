@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo, useRef } from 'react';
 import { useParams, useSearchParams, useNavigate } from 'react-router';
-import { Search, Flame, MapPin, Phone, Info, UtensilsCrossed, X, Star, LayoutGrid, List as ListIcon, Clock, Sparkles, ExternalLink, SlidersHorizontal, Check, Languages, Tag, Crown } from 'lucide-react';
+import { Search, Flame, MapPin, Phone, Info, UtensilsCrossed, X, Star, LayoutGrid, List as ListIcon, Clock, Sparkles, ExternalLink, SlidersHorizontal, Check, Languages, Tag, Crown, Calendar } from 'lucide-react';
 import { api } from '@/services/api';
 import { Shop, Category, MenuItem, Discount } from '@/types';
 import { Skeleton } from '@/components/ui/Skeleton';
@@ -23,6 +23,18 @@ interface PublicCategory extends Category {
 }
 
 export function PublicMenuPage() {
+  const formatDays = (days: string[]) => {
+    if (!days || days.length === 0) return '';
+    const dayOrder = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    const sortedDays = [...days].sort((a, b) => dayOrder.indexOf(a) - dayOrder.indexOf(b));
+    
+    if (sortedDays.length === 7) return 'Everyday';
+    if (sortedDays.length === 5 && sortedDays.join(',') === 'Mon,Tue,Wed,Thu,Fri') return 'Weekdays';
+    if (sortedDays.length === 2 && sortedDays.join(',') === 'Sat,Sun') return 'Weekends';
+    
+    return sortedDays.join(', ');
+  };
+
   const formatTime = (timeStr: string) => {
     if (!timeStr) return '';
     const [h, m] = timeStr.split(':');
@@ -39,7 +51,7 @@ export function PublicMenuPage() {
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategoryId, setActiveCategoryId] = useState<string>('all');
-  const [foodFilter, setFoodFilter] = useState<'all' | 'veg' | 'non-veg' | 'egg' | 'drink'>('all');
+  const [foodFilter, setFoodFilter] = useState<'all' | 'veg' | 'non-veg' | 'egg' | 'drink' | 'dessert'>('all');
   const [sortOrder, setSortOrder] = useState<'default' | 'price_asc' | 'price_desc'>('default');
   const [extraFilters, setExtraFilters] = useState<string[]>([]);
   const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
@@ -94,7 +106,29 @@ export function PublicMenuPage() {
         // Fetch active discounts for the banner
         try {
           const discountRes = await api.get(`/public/shop/${id}/discounts`);
-          setActiveDiscounts(discountRes.data || []);
+          const now = new Date();
+          const currentDay = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][now.getDay()];
+          const currentTime = now.getHours() * 60 + now.getMinutes();
+          
+          const filteredDiscounts = (discountRes.data || []).filter((d: Discount) => {
+            if (d.available_days && d.available_days.length > 0) {
+              if (!d.available_days.includes(currentDay)) return false;
+            }
+            if (d.available_time_presets && d.available_time_presets.length > 0) {
+              const timingFilters = [];
+              if (currentTime >= 240 && currentTime < 480) timingFilters.push('Early Morning');
+              if (currentTime >= 480 && currentTime < 720) timingFilters.push('Morning');
+              if (currentTime >= 720 && currentTime < 960) timingFilters.push('Afternoon');
+              if (currentTime >= 960 && currentTime < 1200) timingFilters.push('Evening');
+              if (currentTime >= 1200 && currentTime < 1440) timingFilters.push('Night');
+              if (currentTime >= 0 && currentTime < 240) timingFilters.push('Mid-night');
+              
+              if (!timingFilters.some(t => d.available_time_presets?.includes(t))) return false;
+            }
+            return true;
+          });
+          
+          setActiveDiscounts(filteredDiscounts);
         } catch {
           // Non-critical — silently ignore
         }
@@ -175,7 +209,7 @@ export function PublicMenuPage() {
         const matchesSearch = item.name.toLowerCase().includes(searchQuery.toLowerCase()) || 
                               (item.description && item.description.toLowerCase().includes(searchQuery.toLowerCase()));
         const matchesFood = foodFilter === 'all' || 
-          (item.food_type && item.food_type.toLowerCase().replace('_', '-') === foodFilter);
+          (item.food_types && item.food_types.map((t: string) => t.toLowerCase().replace('_', '-')).includes(foodFilter));
           
         let matchesExtra = true;
         if (extraFilters.includes('chef_special') && !item.is_highlighted) matchesExtra = false;
@@ -680,6 +714,15 @@ export function PublicMenuPage() {
                     <span className="w-2 h-2 bg-blue-500 rounded-full"></span>
                   </span>
                 </button>
+                <button
+                  onClick={() => setFoodFilter(foodFilter === 'dessert' ? 'all' : 'dessert')}
+                  className={`p-2 rounded-full transition-all shrink-0 ${foodFilter === 'dessert' ? 'bg-pink-50 shadow-sm ring-1 ring-pink-200' : 'text-slate-400 hover:text-slate-600'}`}
+                  title="Desserts Only"
+                >
+                  <span className="w-4 h-4 border-2 border-pink-500 rounded-[3px] flex items-center justify-center">
+                    <span className="w-2 h-2 bg-pink-500 rounded-[2px]"></span>
+                  </span>
+                </button>
               </div>
 
               {/* View Toggle */}
@@ -775,7 +818,7 @@ export function PublicMenuPage() {
                 <div
                   key={disc.id}
                   onClick={() => setSelectedDiscountForModal(disc)}
-                  className="relative shrink-0 w-[85%] sm:w-[350px] flex shadow-md rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1 active:scale-[0.98] snap-center group bg-white"
+                  className="relative shrink-0 min-h-[120px] w-[85%] sm:w-[350px] flex shadow-md rounded-2xl overflow-hidden cursor-pointer transition-all duration-300 hover:shadow-xl hover:-translate-y-1 active:scale-[0.98] snap-center group bg-white"
                   style={{ border: `1px solid ${primaryColor}30` }}
                 >
                   {/* Left Ticket Stub */}
@@ -813,30 +856,39 @@ export function PublicMenuPage() {
                     </div>
                     
                     {disc.description && (
-                      <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed mb-3 font-medium">
+                      <p className="text-xs text-slate-500 line-clamp-2 leading-relaxed mb-2 font-medium">
                         {disc.description}
                       </p>
                     )}
                     
-                    <div className="mt-auto flex items-center justify-between gap-2 min-w-0">
-                      <div className="flex gap-1.5 min-w-0 shrink">
-                        {disc.members_only ? (
-                          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md shadow-sm flex items-center gap-1 bg-purple-100 text-purple-700 min-w-0">
-                            <Crown size={10} className="shrink-0" /> 
-                            <span className="truncate">Members Only</span>
-                          </span>
-                        ) : (
-                          <span 
-                            className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md shadow-sm truncate min-w-0"
-                            style={{ color: primaryColor, backgroundColor: `${primaryColor}15` }}
-                          >
-                            Limited Offer
-                          </span>
-                        )}
+                    <div className="mt-auto flex flex-col gap-2">
+                      {disc.available_days && disc.available_days.length > 0 && (
+                        <div className="flex items-center gap-1.5 text-[10px] text-slate-500 font-semibold">
+                          <Calendar size={12} className="text-slate-400 shrink-0" />
+                          <span className="truncate">{formatDays(disc.available_days)}</span>
+                        </div>
+                      )}
+                      
+                      <div className="flex items-center justify-between gap-2 min-w-0">
+                        <div className="flex gap-1.5 min-w-0 shrink">
+                          {disc.members_only ? (
+                            <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md shadow-sm flex items-center gap-1 bg-purple-100 text-purple-700 min-w-0">
+                              <Crown size={10} className="shrink-0" /> 
+                              <span className="truncate">Members Only</span>
+                            </span>
+                          ) : (
+                            <span 
+                              className="text-[10px] font-bold uppercase tracking-wider px-2 py-1 rounded-md shadow-sm truncate min-w-0"
+                              style={{ color: primaryColor, backgroundColor: `${primaryColor}15` }}
+                            >
+                              Limited Offer
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 group-hover:text-slate-600 transition-colors flex items-center gap-1 shrink-0 whitespace-nowrap">
+                          Tap to use
+                        </span>
                       </div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 group-hover:text-slate-600 transition-colors flex items-center gap-1 shrink-0 whitespace-nowrap">
-                        Tap to use
-                      </span>
                     </div>
                   </div>
                   
@@ -954,24 +1006,32 @@ export function PublicMenuPage() {
                           )}
                           
                           {/* Food Type mark */}
-                          <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm p-0.5 rounded shadow-sm">
-                            {item.food_type === 'veg' ? (
-                              <span className="w-3 h-3 border border-green-600 rounded-[2px] flex items-center justify-center">
-                                <span className="w-1.5 h-1.5 bg-green-600 rounded-full"></span>
-                              </span>
-                            ) : item.food_type === 'egg' ? (
-                              <span className="w-3 h-3 border border-yellow-500 rounded-[2px] flex items-center justify-center">
-                                <span className="w-1.5 h-1.5 bg-yellow-500 rounded-full"></span>
-                              </span>
-                            ) : item.food_type === 'drink' ? (
-                              <span className="w-3 h-3 border border-blue-500 rounded-full flex items-center justify-center">
-                                <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
-                              </span>
-                            ) : (
-                              <span className="w-3 h-3 border border-red-600 rounded-[2px] flex items-center justify-center">
-                                <span className="w-0 h-0 border-l-[3px] border-r-[3px] border-b-[5px] border-transparent border-b-red-600"></span>
-                              </span>
-                            )}
+                          <div className="absolute top-2 right-2 flex flex-col gap-1 z-20">
+                            {item.food_types?.map((type) => (
+                              <div key={type} className="bg-white/90 backdrop-blur-sm p-0.5 rounded shadow-sm">
+                                {type === 'veg' ? (
+                                  <span className="w-3 h-3 border border-green-600 rounded-[2px] flex items-center justify-center" title="Veg">
+                                    <span className="w-1.5 h-1.5 bg-green-600 rounded-full"></span>
+                                  </span>
+                                ) : type === 'egg' ? (
+                                  <span className="w-3 h-3 border border-yellow-500 rounded-[2px] flex items-center justify-center" title="Egg">
+                                    <span className="w-1.5 h-1.5 bg-yellow-500 rounded-full"></span>
+                                  </span>
+                                ) : type === 'drink' ? (
+                                  <span className="w-3 h-3 border border-blue-500 rounded-[2px] flex items-center justify-center" title="Drink">
+                                    <span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span>
+                                  </span>
+                                ) : type === 'dessert' ? (
+                                  <span className="w-3 h-3 border border-pink-500 rounded-[2px] flex items-center justify-center" title="Dessert">
+                                    <span className="w-1.5 h-1.5 bg-pink-500 rounded-[1px]"></span>
+                                  </span>
+                                ) : type === 'non-veg' ? (
+                                  <span className="w-3 h-3 border border-red-600 rounded-[2px] flex items-center justify-center" title="Non-Veg">
+                                    <span className="w-0 h-0 border-l-[3px] border-r-[3px] border-b-[5px] border-transparent border-b-red-600"></span>
+                                  </span>
+                                ) : null}
+                              </div>
+                            ))}
                           </div>
                         </div>
                         
@@ -1488,6 +1548,40 @@ export function PublicMenuPage() {
                 </div>
               )}
             </div>
+
+            {(selectedDiscountForModal.start_date || selectedDiscountForModal.end_date || (selectedDiscountForModal.available_days && selectedDiscountForModal.available_days.length > 0) || (selectedDiscountForModal.available_time_presets && selectedDiscountForModal.available_time_presets.length > 0)) && (
+              <div className="pt-2">
+                <h4 className="text-xs font-bold text-slate-400 mb-2 uppercase tracking-wider flex items-center gap-2">
+                  <Clock size={14} className="text-blue-500" /> Availability
+                </h4>
+                <div className="bg-slate-50 rounded-2xl p-3 border border-slate-100 flex flex-col gap-2">
+                  {(selectedDiscountForModal.start_date || selectedDiscountForModal.end_date) && (
+                    <p className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                      <Calendar size={14} className="text-slate-400 shrink-0" />
+                      <span className="truncate">
+                        {selectedDiscountForModal.start_date ? new Date(selectedDiscountForModal.start_date).toLocaleDateString() : 'Now'} 
+                        {' → '} 
+                        {selectedDiscountForModal.end_date ? new Date(selectedDiscountForModal.end_date).toLocaleDateString() : 'No end'}
+                      </span>
+                    </p>
+                  )}
+                  {selectedDiscountForModal.available_days && selectedDiscountForModal.available_days.length > 0 && (
+                    <p className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                      <Calendar size={14} className="text-slate-400 shrink-0" />
+                      <span className="truncate">{formatDays(selectedDiscountForModal.available_days)}</span>
+                    </p>
+                  )}
+                  {selectedDiscountForModal.available_time_presets && selectedDiscountForModal.available_time_presets.length > 0 && (
+                    <p className="text-sm font-medium text-slate-700 flex items-center gap-2">
+                      <Clock size={14} className="text-slate-400 shrink-0" />
+                      <span className="line-clamp-2">
+                        {selectedDiscountForModal.available_time_presets.map(p => PRESET_TIMINGS[p] ? `${p} ${PRESET_TIMINGS[p]}` : p).join(', ')}
+                      </span>
+                    </p>
+                  )}
+                </div>
+              </div>
+            )}
 
             <div className="pt-2">
               <h4 className="text-xs font-bold text-slate-400 mb-3 uppercase tracking-wider flex items-center gap-2">

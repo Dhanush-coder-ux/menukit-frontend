@@ -180,13 +180,20 @@ export function PublicItemPage() {
         <div className="mb-6">
           <div className="flex items-start justify-between gap-4 mb-2">
             <h2 className="text-2xl font-bold font-heading leading-tight">{item.name}</h2>
-            {item.food_type && item.food_type !== 'drink' && (
-              <div 
-                className={`w-5 h-5 rounded-sm border-2 flex items-center justify-center shrink-0 ${item.food_type === 'veg' ? 'border-green-600' : item.food_type === 'non-veg' ? 'border-red-600' : 'border-yellow-600'}`}
+            {item.food_types && item.food_types.filter(t => t !== 'drink' && t !== 'none').map((type) => (
+              <div key={type}
+                className={`w-5 h-5 rounded-sm border-2 flex items-center justify-center shrink-0 ${type === 'veg' ? 'border-green-600' : type === 'non-veg' ? 'border-red-600' : type === 'dessert' ? 'border-pink-500' : 'border-yellow-600'}`}
+                title={type.charAt(0).toUpperCase() + type.slice(1)}
               >
-                <div className={`w-2.5 h-2.5 rounded-full ${item.food_type === 'veg' ? 'bg-green-600' : item.food_type === 'non-veg' ? 'bg-red-600' : 'bg-yellow-600'}`} />
+                {type === 'non-veg' ? (
+                  <div className="w-0 h-0 border-l-[4px] border-r-[4px] border-b-[7px] border-transparent border-b-red-600" />
+                ) : type === 'dessert' ? (
+                  <div className="w-2 h-2 bg-pink-500 rounded-[2px]" />
+                ) : (
+                  <div className={`w-2.5 h-2.5 rounded-full ${type === 'veg' ? 'bg-green-600' : 'bg-yellow-600'}`} />
+                )}
               </div>
-            )}
+            ))}
           </div>
           
           <div className="flex items-center gap-3">

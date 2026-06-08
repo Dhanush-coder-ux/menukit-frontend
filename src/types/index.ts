@@ -110,7 +110,7 @@ export interface MenuItem {
   description: string | null;
   price: string;
   offer_price: string | null;
-  food_type: 'veg' | 'non-veg' | 'egg' | 'drink';
+  food_types: ('veg' | 'non-veg' | 'egg' | 'drink' | 'none' | 'dessert')[];
   allow_ice_preference: boolean;
   is_bestseller: boolean;
   is_highlighted: boolean;
@@ -169,6 +169,8 @@ export interface Discount {
   target_ids: string[] | null;
   start_date: string | null;
   end_date: string | null;
+  available_days?: string[] | null;
+  available_time_presets?: string[] | null;
   is_active: boolean;
   members_only: boolean;
   created_at: string;

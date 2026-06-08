@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
-import { Plus, Edit2, Trash2, Search, Filter, Image as ImageIcon, Star, Flame, LayoutGrid, List, Sparkles, Wand2, Loader2, MessageSquare } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, Filter, Image as ImageIcon, Star, Flame, LayoutGrid, List, Sparkles, Wand2, Loader2, MessageSquare, Check, RefreshCw } from 'lucide-react';
 import { api } from '@/services/api';
 import { useShopStore } from '@/store/shopStore';
 import { MenuItem, MenuItemVariant, MenuItemAddon } from '@/types';
@@ -40,7 +40,9 @@ export function MenuItemsPage() {
   const [isLoadingReviews, setIsLoadingReviews] = useState(false);
   
   const [pendingImages, setPendingImages] = useState<File[]>([]);
-  const [searchImagesModal, setSearchImagesModal] = useState<{ item: MenuItem, urls: string[] } | null>(null);
+  const [pendingImageUrls, setPendingImageUrls] = useState<string[]>([]);
+  const [searchImagesModal, setSearchImagesModal] = useState<{ name: string, urls: string[] } | null>(null);
+  const [selectedImageUrls, setSelectedImageUrls] = useState<string[]>([]);
   const [isSavingVariant, setIsSavingVariant] = useState(false);
   
   const defaultForm = {
@@ -49,7 +51,7 @@ export function MenuItemsPage() {
     description: '',
     price: '',
     offer_price: '',
-    food_type: 'veg',
+    food_types: ['veg'],
     is_bestseller: false,
     is_highlighted: false,
     is_available: true,
@@ -96,49 +98,85 @@ export function MenuItemsPage() {
     }
   };
 
-  const handleSearchImages = async (item: MenuItem) => {
+  const handleSearchImages = async (item?: MenuItem) => {
+    const itemName = item ? item.name : formData.name;
+    if (!itemName.trim()) {
+      toast.error('Please enter a menu name first to search for images.');
+      return;
+    }
+    const currentId = item ? item.id : 'new';
     if (autoImageLoadingId) return;
-    setAutoImageLoadingId(item.id);
+    setAutoImageLoadingId(currentId);
     try {
-      const res = await api.get(`/menu-items/${item.id}/search-images`);
+      const res = await api.get(`/menu-items/search-images-by-name?q=${encodeURIComponent(itemName)}`);
       const urls = res.data.urls || [];
       if (urls.length === 0) {
         toast.error('No images found for this item.');
       } else {
-        setSearchImagesModal({ item, urls });
+        setSearchImagesModal({ name: itemName, urls });
+        setSelectedImageUrls([]);
       }
     } catch (err: any) {
-      const msg = err?.response?.data?.detail || 'Could not find an image. Try again.';
-      toast.error(msg);
+      toast.error('Could not find an image. Try again.');
     } finally {
       setAutoImageLoadingId(null);
     }
   };
 
-  const handleSaveImageVariant = async (url: string) => {
-    if (!searchImagesModal) return;
+  const handleConfirmImageSelection = async () => {
+    if (!searchImagesModal || selectedImageUrls.length === 0) return;
+    
     setIsSavingVariant(true);
     try {
-      const res = await api.post(`/menu-items/${searchImagesModal.item.id}/save-image-url`, { url });
-      const newImage = res.data;
-      
-      // Update local state so the image appears immediately
-      setMenuItems(menuItems.map(m => {
-        if (m.id === searchImagesModal.item.id) {
-          const updatedImages = [...(m.images || []), newImage];
-          return { 
-            ...m, 
-            image_url: newImage.image_url, 
-            thumbnail_url: newImage.thumbnail_url,
-            images: updatedImages 
-          };
+      if (editingItem) {
+        let newImages: any[] = [];
+        let hasError = false;
+        let errorMsg = '';
+        
+        for (const url of selectedImageUrls) {
+           try {
+             const res = await api.post(`/menu-items/${editingItem.id}/save-image-url`, { url });
+             newImages.push(res.data);
+           } catch (e: any) {
+             hasError = true;
+             errorMsg = e?.response?.data?.detail || 'Failed to process images.';
+             break;
+           }
         }
-        return m;
-      }));
-      toast.success('Image saved successfully!');
+        
+        if (newImages.length > 0) {
+          setMenuItems(menuItems.map(m => {
+            if (m.id === editingItem.id) {
+              const currentImages = m.images || [];
+              return { 
+                ...m, 
+                image_url: currentImages.length === 0 && newImages.length > 0 ? newImages[0].image_url : m.image_url, 
+                thumbnail_url: currentImages.length === 0 && newImages.length > 0 ? newImages[0].thumbnail_url : m.thumbnail_url,
+                images: [...currentImages, ...newImages] 
+              };
+            }
+            return m;
+          }));
+          setEditingItem(prev => {
+            if (!prev) return prev;
+            return { ...prev, images: [...(prev.images || []), ...newImages] };
+          });
+        }
+        
+        if (hasError) {
+          if (errorMsg.includes("Could not download") || errorMsg.includes("Failed to save image")) {
+            toast.error("That image couldn't be downloaded. Please choose a different image or hit Regenerate.");
+          } else {
+            toast.error(errorMsg);
+          }
+        } else {
+          toast.success(`Successfully saved ${newImages.length} image(s)!`);
+        }
+      } else {
+        setPendingImageUrls([...pendingImageUrls, ...selectedImageUrls]);
+        toast.success(`Added ${selectedImageUrls.length} image(s) to selection`);
+      }
       setSearchImagesModal(null);
-    } catch (err: any) {
-      toast.error(err?.response?.data?.detail || 'Failed to save image.');
     } finally {
       setIsSavingVariant(false);
     }
@@ -169,7 +207,7 @@ export function MenuItemsPage() {
         description: item.description || '',
         price: item.price,
         offer_price: item.offer_price || '',
-        food_type: item.food_type,
+        food_types: item.food_types || [],
         is_bestseller: item.is_bestseller,
         is_highlighted: item.is_highlighted,
         is_available: item.is_available,
@@ -189,6 +227,7 @@ export function MenuItemsPage() {
       });
     }
     setPendingImages([]);
+    setPendingImageUrls([]);
     setCurrentStep(1);
     setIsModalOpen(true);
   };
@@ -249,6 +288,18 @@ export function MenuItemsPage() {
             }
           }
           toast.dismiss('upload-toast');
+        }
+        
+        if (pendingImageUrls.length > 0) {
+          toast.loading('Saving selected images...', { id: 'save-url-toast' });
+          for (let i = 0; i < pendingImageUrls.length; i++) {
+             try {
+               await api.post(`/menu-items/${res.data.id}/save-image-url`, { url: pendingImageUrls[i] });
+             } catch (err) {
+               console.error('Failed to save image url', err);
+             }
+          }
+          toast.dismiss('save-url-toast');
         }
         
         toast.success('Menu created');
@@ -482,24 +533,32 @@ export function MenuItemsPage() {
                   </div>
                   
                   {/* Veg/Non-veg mark */}
-                  <div className="absolute top-2 right-2 bg-white/90 backdrop-blur-sm p-0.5 rounded shadow-sm z-20">
-                    {item.food_type === 'veg' ? (
-                      <span className="w-3 h-3 border border-green-600 rounded-[2px] flex items-center justify-center">
-                        <span className="w-1.5 h-1.5 bg-green-600 rounded-full"></span>
-                      </span>
-                    ) : item.food_type === 'egg' ? (
-                      <span className="w-3 h-3 border border-yellow-600 rounded-[2px] flex items-center justify-center">
-                        <span className="w-1.5 h-1.5 bg-yellow-600 rounded-full"></span>
-                      </span>
-                    ) : item.food_type === 'drink' ? (
-                      <span className="w-3 h-3 border border-blue-600 rounded-[2px] flex items-center justify-center">
-                        <span className="w-1.5 h-1.5 bg-blue-600 rounded-full"></span>
-                      </span>
-                    ) : (
-                      <span className="w-3 h-3 border border-red-600 rounded-[2px] flex items-center justify-center">
-                        <span className="w-0 h-0 border-l-[3px] border-r-[3px] border-b-[5px] border-transparent border-b-red-600"></span>
-                      </span>
-                    )}
+                  <div className="absolute top-2 right-2 flex flex-col gap-1 z-20">
+                    {item.food_types?.map((type) => (
+                      <div key={type} className="bg-white/90 backdrop-blur-sm p-0.5 rounded shadow-sm">
+                        {type === 'veg' ? (
+                          <span className="w-3 h-3 border border-green-600 rounded-[2px] flex items-center justify-center" title="Veg">
+                            <span className="w-1.5 h-1.5 bg-green-600 rounded-full"></span>
+                          </span>
+                        ) : type === 'egg' ? (
+                          <span className="w-3 h-3 border border-yellow-600 rounded-[2px] flex items-center justify-center" title="Egg">
+                            <span className="w-1.5 h-1.5 bg-yellow-600 rounded-full"></span>
+                          </span>
+                        ) : type === 'drink' ? (
+                          <span className="w-3 h-3 border border-blue-600 rounded-[2px] flex items-center justify-center" title="Drink">
+                            <span className="w-1.5 h-1.5 bg-blue-600 rounded-full"></span>
+                          </span>
+                        ) : type === 'dessert' ? (
+                          <span className="w-3 h-3 border border-pink-500 rounded-[2px] flex items-center justify-center" title="Dessert">
+                            <span className="w-1.5 h-1.5 bg-pink-500 rounded-[1px]"></span>
+                          </span>
+                        ) : type === 'non-veg' ? (
+                          <span className="w-3 h-3 border border-red-600 rounded-[2px] flex items-center justify-center" title="Non-Veg">
+                            <span className="w-0 h-0 border-l-[3px] border-r-[3px] border-b-[5px] border-transparent border-b-red-600"></span>
+                          </span>
+                        ) : null}
+                      </div>
+                    ))}
                   </div>
                 </div>
                 
@@ -618,8 +677,9 @@ export function MenuItemsPage() {
             })}
           </div>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {currentStep === 1 && (
+          <form onSubmit={handleSubmit} className="mt-2 flex flex-col h-[450px] sm:h-[500px]">
+            <div className="flex-1 overflow-y-auto px-1 space-y-5 no-scrollbar pb-4">
+              {currentStep === 1 && (
               <div className="space-y-4 animate-fade-in">
                 <Input
                   label="Menu Name *"
@@ -815,35 +875,49 @@ export function MenuItemsPage() {
                   <div className="flex bg-slate-100 dark:bg-slate-800 p-1 rounded-xl h-auto flex-wrap gap-1">
                     <button
                       type="button"
-                      onClick={() => setFormData({...formData, food_type: 'veg'})}
-                      className={`flex-1 min-w-[80px] p-2 rounded-lg text-sm font-medium transition-colors flex flex-col sm:flex-row items-center justify-center gap-1.5 ${formData.food_type === 'veg' ? 'bg-white text-green-700 shadow-sm dark:bg-slate-700 dark:text-green-400' : 'text-slate-500 hover:text-slate-900'}`}
+                      onClick={() => setFormData({...formData, food_types: formData.food_types.includes('veg') ? formData.food_types.filter(t => t !== 'veg') : [...formData.food_types, 'veg']})}
+                      className={`flex-1 min-w-[80px] p-2 rounded-lg text-sm font-medium transition-colors flex flex-col sm:flex-row items-center justify-center gap-1.5 ${formData.food_types.includes('veg') ? 'bg-white text-green-700 shadow-sm dark:bg-slate-700 dark:text-green-400' : 'text-slate-500 hover:text-slate-900'}`}
                     >
                       <span className="w-3 h-3 border border-green-600 rounded-[2px] flex items-center justify-center shrink-0"><span className="w-1.5 h-1.5 bg-green-600 rounded-full"></span></span> Veg
                     </button>
                     <button
                       type="button"
-                      onClick={() => setFormData({...formData, food_type: 'non-veg'})}
-                      className={`flex-1 min-w-[80px] p-2 rounded-lg text-sm font-medium transition-colors flex flex-col sm:flex-row items-center justify-center gap-1.5 ${formData.food_type === 'non-veg' ? 'bg-white text-red-700 shadow-sm dark:bg-slate-700 dark:text-red-400' : 'text-slate-500 hover:text-slate-900'}`}
+                      onClick={() => setFormData({...formData, food_types: formData.food_types.includes('non-veg') ? formData.food_types.filter(t => t !== 'non-veg') : [...formData.food_types, 'non-veg']})}
+                      className={`flex-1 min-w-[80px] p-2 rounded-lg text-sm font-medium transition-colors flex flex-col sm:flex-row items-center justify-center gap-1.5 ${formData.food_types.includes('non-veg') ? 'bg-white text-red-700 shadow-sm dark:bg-slate-700 dark:text-red-400' : 'text-slate-500 hover:text-slate-900'}`}
                     >
                       <span className="w-3 h-3 border border-red-600 rounded-[2px] flex items-center justify-center shrink-0"><span className="w-0 h-0 border-l-[3px] border-r-[3px] border-b-[5px] border-transparent border-b-red-600"></span></span> Non-Veg
                     </button>
                     <button
                       type="button"
-                      onClick={() => setFormData({...formData, food_type: 'egg'})}
-                      className={`flex-1 min-w-[80px] p-2 rounded-lg text-sm font-medium transition-colors flex flex-col sm:flex-row items-center justify-center gap-1.5 ${formData.food_type === 'egg' ? 'bg-white text-yellow-600 shadow-sm dark:bg-slate-700 dark:text-yellow-400' : 'text-slate-500 hover:text-slate-900'}`}
+                      onClick={() => setFormData({...formData, food_types: formData.food_types.includes('egg') ? formData.food_types.filter(t => t !== 'egg') : [...formData.food_types, 'egg']})}
+                      className={`flex-1 min-w-[80px] p-2 rounded-lg text-sm font-medium transition-colors flex flex-col sm:flex-row items-center justify-center gap-1.5 ${formData.food_types.includes('egg') ? 'bg-white text-yellow-600 shadow-sm dark:bg-slate-700 dark:text-yellow-400' : 'text-slate-500 hover:text-slate-900'}`}
                     >
                       <span className="w-3 h-3 border border-yellow-500 rounded-[2px] flex items-center justify-center shrink-0"><span className="w-1.5 h-1.5 bg-yellow-500 rounded-full"></span></span> Egg
                     </button>
                     <button
                       type="button"
-                      onClick={() => setFormData({...formData, food_type: 'drink'})}
-                      className={`flex-1 min-w-[80px] p-2 rounded-lg text-sm font-medium transition-colors flex flex-col sm:flex-row items-center justify-center gap-1.5 ${formData.food_type === 'drink' ? 'bg-white text-blue-600 shadow-sm dark:bg-slate-700 dark:text-blue-400' : 'text-slate-500 hover:text-slate-900'}`}
+                      onClick={() => setFormData({...formData, food_types: formData.food_types.includes('drink') ? formData.food_types.filter(t => t !== 'drink') : [...formData.food_types, 'drink']})}
+                      className={`flex-1 min-w-[80px] p-2 rounded-lg text-sm font-medium transition-colors flex flex-col sm:flex-row items-center justify-center gap-1.5 ${formData.food_types.includes('drink') ? 'bg-white text-blue-600 shadow-sm dark:bg-slate-700 dark:text-blue-400' : 'text-slate-500 hover:text-slate-900'}`}
                     >
                       <span className="w-3 h-3 border border-blue-500 rounded-full flex items-center justify-center shrink-0"><span className="w-1.5 h-1.5 bg-blue-500 rounded-full"></span></span> Drink
                     </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({...formData, food_types: formData.food_types.includes('dessert') ? formData.food_types.filter(t => t !== 'dessert') : [...formData.food_types, 'dessert']})}
+                      className={`flex-1 min-w-[80px] p-2 rounded-lg text-sm font-medium transition-colors flex flex-col sm:flex-row items-center justify-center gap-1.5 ${formData.food_types.includes('dessert') ? 'bg-white text-pink-600 shadow-sm dark:bg-slate-700 dark:text-pink-400' : 'text-slate-500 hover:text-slate-900'}`}
+                    >
+                      <span className="w-3 h-3 border border-pink-500 rounded-sm flex items-center justify-center shrink-0"><span className="w-1.5 h-1.5 bg-pink-500 rounded-[1px]"></span></span> Dessert
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setFormData({...formData, food_types: formData.food_types.includes('none') ? formData.food_types.filter(t => t !== 'none') : [...formData.food_types, 'none']})}
+                      className={`flex-1 min-w-[80px] p-2 rounded-lg text-sm font-medium transition-colors flex flex-col sm:flex-row items-center justify-center gap-1.5 ${formData.food_types.includes('none') ? 'bg-white text-slate-700 shadow-sm dark:bg-slate-700 dark:text-slate-200' : 'text-slate-500 hover:text-slate-900'}`}
+                    >
+                      None
+                    </button>
                   </div>
                   
-                  {formData.food_type === 'drink' && (
+                  {formData.food_types.includes('drink') && (
                     <div className="pt-3">
                       <Switch
                         checked={formData.allow_ice_preference}
@@ -890,22 +964,20 @@ export function MenuItemsPage() {
                       <ImageIcon size={16} className="mr-2 text-slate-500"/> Product Images
                     </span>
                     <div className="flex gap-2 items-center">
-                      {editingItem && (
-                        <button
-                          type="button"
-                          onClick={() => handleSearchImages(editingItem)}
-                          disabled={autoImageLoadingId === editingItem.id}
-                          className="flex items-center gap-1.5 text-xs font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 px-3 py-1.5 rounded-full transition-colors disabled:opacity-50"
-                        >
-                          {autoImageLoadingId === editingItem.id ? (
-                            <Loader2 size={14} className="animate-spin" />
-                          ) : (
-                            <Wand2 size={14} />
-                          )}
-                          Auto-find
-                        </button>
-                      )}
-                      {(!editingItem ? pendingImages.length : (editingItem.images?.length || 0)) < 4 ? (
+                      <button
+                        type="button"
+                        onClick={() => handleSearchImages(editingItem || undefined)}
+                        disabled={autoImageLoadingId === (editingItem?.id || 'new')}
+                        className="flex items-center gap-1.5 text-xs font-medium bg-slate-100 text-slate-700 hover:bg-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:hover:bg-slate-700 px-3 py-1.5 rounded-full transition-colors disabled:opacity-50"
+                      >
+                        {autoImageLoadingId === (editingItem?.id || 'new') ? (
+                          <Loader2 size={14} className="animate-spin" />
+                        ) : (
+                          <Wand2 size={14} />
+                        )}
+                        Auto-find
+                      </button>
+                      {(!editingItem ? (pendingImages.length + pendingImageUrls.length) : (editingItem.images?.length || 0)) < 4 ? (
                         <label className="cursor-pointer text-xs font-medium bg-primary-50 text-primary-700 hover:bg-primary-100 dark:bg-primary-900/30 dark:text-primary-400 px-3 py-1.5 rounded-full transition-colors">
                           Upload New
                           <input 
@@ -1008,10 +1080,10 @@ export function MenuItemsPage() {
                         </div>
                       ))}
                     </div>
-                  ) : (!editingItem && pendingImages.length > 0) ? (
+                  ) : (!editingItem && (pendingImages.length > 0 || pendingImageUrls.length > 0)) ? (
                     <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                       {pendingImages.map((file, idx) => (
-                        <div key={idx} className="w-full h-24 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 relative group">
+                        <div key={`file-${idx}`} className="w-full h-24 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 relative group">
                           <img 
                             src={URL.createObjectURL(file)} 
                             alt="" 
@@ -1029,7 +1101,33 @@ export function MenuItemsPage() {
                               <Trash2 size={14} />
                             </button>
                           </div>
-                          {idx === 0 && (
+                          {idx === 0 && pendingImageUrls.length === 0 && (
+                            <div className="absolute top-1 left-1 bg-primary text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow">
+                              Primary
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                      {pendingImageUrls.map((url, idx) => (
+                        <div key={`url-${idx}`} className="w-full h-24 rounded-lg overflow-hidden border border-slate-200 dark:border-slate-700 relative group">
+                          <img 
+                            src={url} 
+                            alt="" 
+                            className="w-full h-full object-cover" 
+                          />
+                          <div className="absolute inset-0 bg-black/40 lg:bg-black/60 opacity-100 lg:opacity-0 lg:group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setPendingImageUrls(pendingImageUrls.filter((_, i) => i !== idx));
+                              }}
+                              className="p-1.5 bg-red-500/80 hover:bg-red-500 rounded text-white"
+                              title="Delete Image"
+                            >
+                              <Trash2 size={14} />
+                            </button>
+                          </div>
+                          {idx === 0 && pendingImages.length === 0 && (
                             <div className="absolute top-1 left-1 bg-primary text-white text-[9px] font-bold px-1.5 py-0.5 rounded shadow">
                               Primary
                             </div>
@@ -1137,8 +1235,9 @@ export function MenuItemsPage() {
                 </div>
               </div>
             )}
+            </div>
 
-            <div className="flex justify-between items-center pt-4 mt-6 border-t border-slate-100 dark:border-slate-800">
+            <div className="flex justify-between items-center pt-4 mt-2 border-t border-slate-100 dark:border-slate-800 shrink-0">
               <Button 
                 variant="secondary" 
                 type="button" 
@@ -1298,33 +1397,92 @@ export function MenuItemsPage() {
       <Modal
         isOpen={!!searchImagesModal}
         onClose={() => !isSavingVariant && setSearchImagesModal(null)}
-        title="Select an Image"
+        title="Select Images"
         className="max-w-2xl"
       >
         <div className="mt-4">
-          <p className="text-sm text-slate-500 mb-4">
-            Select the best image for <strong className="text-slate-900 dark:text-white">{searchImagesModal?.item.name}</strong>.
+          <p className="text-sm text-slate-500 mb-4 flex justify-between">
+            <span>Select the best images for <strong className="text-slate-900 dark:text-white">{searchImagesModal?.name}</strong>. (Max 4 total)</span>
+            <span className="font-semibold text-primary">{(editingItem ? (editingItem.images?.length || 0) : (pendingImages.length + pendingImageUrls.length)) + selectedImageUrls.length}/4</span>
           </p>
 
           <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 max-h-[60vh] overflow-y-auto p-1 custom-scrollbar">
-            {searchImagesModal?.urls.map((url, idx) => (
-              <div 
-                key={idx} 
-                className="relative aspect-square rounded-xl overflow-hidden cursor-pointer group bg-slate-100 dark:bg-slate-800"
-                onClick={() => handleSaveImageVariant(url)}
-              >
-                <img 
-                  src={url} 
-                  alt="Variant" 
-                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-110"
-                />
-                <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
-                  <div className="bg-primary text-white p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform scale-75 group-hover:scale-100 shadow-xl shadow-primary/30">
-                    <Plus size={20} />
-                  </div>
+            {searchImagesModal?.urls.map((url, idx) => {
+              const isSelected = selectedImageUrls.includes(url);
+              return (
+                <div 
+                  key={idx} 
+                  className={`relative aspect-square rounded-xl overflow-hidden cursor-pointer group bg-slate-100 dark:bg-slate-800 border-2 transition-all duration-200 ${isSelected ? 'border-primary ring-2 ring-primary ring-offset-1' : 'border-transparent'}`}
+                  onClick={() => {
+                    const totalSelected = (editingItem ? (editingItem.images?.length || 0) : (pendingImages.length + pendingImageUrls.length)) + selectedImageUrls.length;
+                    if (isSelected) {
+                      setSelectedImageUrls(selectedImageUrls.filter(u => u !== url));
+                    } else {
+                      if (totalSelected >= 4) {
+                        toast.error('Maximum 4 images allowed per item');
+                        return;
+                      }
+                      setSelectedImageUrls([...selectedImageUrls, url]);
+                    }
+                  }}
+                >
+                  <img 
+                    src={url} 
+                    alt="Variant" 
+                    className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                    referrerPolicy="no-referrer"
+                    onError={(e) => {
+                      const parent = e.currentTarget.parentElement;
+                      if (parent) parent.style.display = 'none';
+                      if (isSelected) setSelectedImageUrls(prev => prev.filter(u => u !== url));
+                    }}
+                  />
+                  {isSelected && (
+                    <div className="absolute inset-0 bg-primary/20 flex items-center justify-center">
+                      <div className="bg-primary text-white p-1 rounded-full shadow-lg scale-110 transition-transform">
+                        <Check size={24} strokeWidth={3} />
+                      </div>
+                    </div>
+                  )}
+                  {!isSelected && (
+                    <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors duration-300 flex items-center justify-center">
+                      <div className="bg-white/90 text-slate-900 p-2 rounded-full opacity-0 group-hover:opacity-100 transition-opacity duration-300 transform scale-75 group-hover:scale-100 shadow-xl">
+                        <Plus size={20} />
+                      </div>
+                    </div>
+                  )}
                 </div>
-              </div>
-            ))}
+              );
+            })}
+          </div>
+          
+          <div className="mt-6 flex justify-between gap-3">
+            <Button 
+              variant="secondary" 
+              onClick={async () => {
+                try {
+                  setIsSavingVariant(true);
+                  const res = await api.get(`/menu-items/search-images-by-name?q=${encodeURIComponent(searchImagesModal?.name || '')}`);
+                  setSearchImagesModal({ name: searchImagesModal?.name || '', urls: res.data.urls });
+                } catch (error) {
+                  toast.error('Failed to regenerate images');
+                } finally {
+                  setIsSavingVariant(false);
+                }
+              }}
+              disabled={isSavingVariant}
+            >
+              <RefreshCw size={16} className="mr-2" /> Regenerate
+            </Button>
+            <div className="flex gap-3">
+              <Button variant="secondary" onClick={() => setSearchImagesModal(null)} disabled={isSavingVariant}>
+                Cancel
+              </Button>
+              <Button onClick={handleConfirmImageSelection} disabled={isSavingVariant || selectedImageUrls.length === 0}>
+                {isSavingVariant ? <Loader2 size={16} className="animate-spin mr-2" /> : <Check size={16} className="mr-2" />}
+                {selectedImageUrls.length > 0 ? `Add ${selectedImageUrls.length} Image(s)` : 'Select Images'}
+              </Button>
+            </div>
           </div>
           
           {isSavingVariant && (

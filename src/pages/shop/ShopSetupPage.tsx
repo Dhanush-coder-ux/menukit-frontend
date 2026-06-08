@@ -528,12 +528,28 @@ export function ShopSetupPage() {
                 />
               </div>
               
-              <div className="flex gap-4 px-1">
-                 <div className="flex-1 text-xs font-mono text-slate-500 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-md">
-                   Lat: {formData.latitude || 'Not set'}
+              <div className="flex flex-col sm:flex-row gap-3 px-1">
+                 <div className="flex-1 flex items-center bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden transition-colors focus-within:border-primary focus-within:ring-1 focus-within:ring-primary shadow-sm">
+                   <span className="text-xs font-semibold text-slate-500 px-3 bg-slate-100 dark:bg-slate-800 h-full flex items-center border-r border-slate-200 dark:border-slate-700">Lat:</span>
+                   <input
+                     type="number"
+                     step="any"
+                     value={formData.latitude}
+                     onChange={e => setFormData({ ...formData, latitude: e.target.value })}
+                     placeholder="Not set"
+                     className="w-full text-sm font-mono text-slate-700 dark:text-slate-300 bg-transparent px-3 py-2 outline-none"
+                   />
                  </div>
-                 <div className="flex-1 text-xs font-mono text-slate-500 bg-slate-100 dark:bg-slate-800 p-1.5 rounded-md">
-                   Lng: {formData.longitude || 'Not set'}
+                 <div className="flex-1 flex items-center bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-lg overflow-hidden transition-colors focus-within:border-primary focus-within:ring-1 focus-within:ring-primary shadow-sm">
+                   <span className="text-xs font-semibold text-slate-500 px-3 bg-slate-100 dark:bg-slate-800 h-full flex items-center border-r border-slate-200 dark:border-slate-700">Lng:</span>
+                   <input
+                     type="number"
+                     step="any"
+                     value={formData.longitude}
+                     onChange={e => setFormData({ ...formData, longitude: e.target.value })}
+                     placeholder="Not set"
+                     className="w-full text-sm font-mono text-slate-700 dark:text-slate-300 bg-transparent px-3 py-2 outline-none"
+                   />
                  </div>
               </div>
               
