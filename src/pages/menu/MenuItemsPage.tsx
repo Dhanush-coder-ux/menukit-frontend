@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
-import { Plus, Edit2, Trash2, Search, Filter, Image as ImageIcon, Star, Flame, LayoutGrid, List, Sparkles, Wand2, Loader2, MessageSquare, Check, RefreshCw } from 'lucide-react';
+import { Plus, Edit2, Trash2, Search, Filter, Image as ImageIcon, Star, Flame, LayoutGrid, List, Sparkles, Wand2, Loader2, MessageSquare, Check, RefreshCw, Code } from 'lucide-react';
 import { api } from '@/services/api';
 import { useShopStore } from '@/store/shopStore';
 import { MenuItem, MenuItemVariant, MenuItemAddon } from '@/types';
@@ -35,6 +35,8 @@ export function MenuItemsPage() {
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [imageToDelete, setImageToDelete] = useState<{itemId: string, imageId: string} | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeletingAll, setIsDeletingAll] = useState(false);
+  const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
   const [autoImageLoadingId, setAutoImageLoadingId] = useState<string | null>(null);
   const [reviewsModal, setReviewsModal] = useState<{ item: MenuItem; summary: ReviewSummary | null } | null>(null);
   const [isLoadingReviews, setIsLoadingReviews] = useState(false);
@@ -342,6 +344,20 @@ export function MenuItemsPage() {
     }
   };
 
+  const handleDeleteAll = async () => {
+    setIsDeletingAll(true);
+    try {
+      await api.delete('/menu-items/all');
+      setMenuItems([]);
+      setShowDeleteAllConfirm(false);
+      toast.success('All menu items deleted');
+    } catch (error) {
+      toast.error('Failed to delete all menu items');
+    } finally {
+      setIsDeletingAll(false);
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-6xl animate-fade-in">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
@@ -349,6 +365,15 @@ export function MenuItemsPage() {
           <h2 className="text-2xl font-bold font-heading">Menu Items</h2>
           <p className="text-slate-500">Add and manage your menus.</p>
         </div>
+        {menuItems.length > 0 && (
+          <button
+            onClick={() => setShowDeleteAllConfirm(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 font-medium text-sm transition-colors border border-red-200 dark:bg-red-900/20 dark:border-red-800 dark:hover:bg-red-900/40"
+          >
+            <Trash2 size={15} />
+            Delete All
+          </button>
+        )}
       </div>
 
       {/* Filters & Tabs */}
@@ -1300,6 +1325,16 @@ export function MenuItemsPage() {
         isLoading={isDeleting}
       />
 
+      <ConfirmModal
+        isOpen={showDeleteAllConfirm}
+        onClose={() => setShowDeleteAllConfirm(false)}
+        onConfirm={handleDeleteAll}
+        title="Delete All Menu Items"
+        message="Are you sure you want to delete ALL menu items? This will permanently remove every menu item. This action cannot be undone."
+        confirmText="Delete All"
+        isLoading={isDeletingAll}
+      />
+
       <Lightbox 
         isOpen={!!lightboxImage}
         onClose={() => setLightboxImage(null)}
@@ -1503,6 +1538,22 @@ export function MenuItemsPage() {
               : 'opacity-0 translate-y-4 scale-95 pointer-events-none'
           }`}
         >
+          <div className="flex items-center gap-3">
+            <span className="bg-white dark:bg-slate-800 px-3 py-2 rounded-lg shadow text-xs font-medium">
+              JSON Bulk Upload
+            </span>
+
+            <button
+              onClick={() => {
+                setIsFabOpen(false);
+                window.location.href = '/json-bulk-upload';
+              }}
+              className="w-12 h-12 rounded-full bg-white dark:bg-slate-800 shadow-lg flex items-center justify-center hover:scale-105 transition-transform text-blue-500"
+            >
+              <Code size={20} />
+            </button>
+          </div>
+
           <div className="flex items-center gap-3">
             <span className="bg-white dark:bg-slate-800 px-3 py-2 rounded-lg shadow text-xs font-medium">
               AI Bulk Upload

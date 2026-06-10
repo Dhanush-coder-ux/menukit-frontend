@@ -110,6 +110,8 @@ export function CategoriesPage() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [categoryToDelete, setCategoryToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isDeletingAll, setIsDeletingAll] = useState(false);
+  const [showDeleteAllConfirm, setShowDeleteAllConfirm] = useState(false);
 
   const sensors = useSensors(
     useSensor(PointerSensor, {
@@ -198,6 +200,20 @@ export function CategoriesPage() {
     }
   };
 
+  const handleDeleteAll = async () => {
+    setIsDeletingAll(true);
+    try {
+      await api.delete('/categories/all');
+      setCategories([]);
+      setShowDeleteAllConfirm(false);
+      toast.success('All categories deleted');
+    } catch (error) {
+      toast.error('Failed to delete all categories');
+    } finally {
+      setIsDeletingAll(false);
+    }
+  };
+
   const handleDragEnd = async (event: DragEndEvent) => {
     const { active, over } = event;
 
@@ -229,6 +245,15 @@ export function CategoriesPage() {
           <h2 className="text-2xl font-bold font-heading">Menu Categories {categories.length > 0 && `(${categories.length})`}</h2>
           <p className="text-slate-500">Create categories like Starters, Main Course, Drinks.</p>
         </div>
+        {categories.length > 0 && (
+          <button
+            onClick={() => setShowDeleteAllConfirm(true)}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg bg-red-50 hover:bg-red-100 text-red-600 font-medium text-sm transition-colors border border-red-200 dark:bg-red-900/20 dark:border-red-800 dark:hover:bg-red-900/40"
+          >
+            <Trash2 size={15} />
+            Delete All
+          </button>
+        )}
       </div>
 
       {isLoading ? (
@@ -312,6 +337,16 @@ export function CategoriesPage() {
         message="Are you sure you want to delete this category? All items inside will also be deleted. This action cannot be undone."
         confirmText="Delete Category"
         isLoading={isDeleting}
+      />
+
+      <ConfirmModal
+        isOpen={showDeleteAllConfirm}
+        onClose={() => setShowDeleteAllConfirm(false)}
+        onConfirm={handleDeleteAll}
+        title="Delete All Categories"
+        message="Are you sure you want to delete ALL categories? This will permanently remove every category and all menu items inside them. This action cannot be undone."
+        confirmText="Delete All"
+        isLoading={isDeletingAll}
       />
       
       {/* FAB for Add Category */}

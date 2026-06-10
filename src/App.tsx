@@ -17,6 +17,7 @@ import { ShopSetupPage } from '@/pages/shop/ShopSetupPage';
 import { CategoriesPage } from '@/pages/menu/CategoriesPage';
 import { MenuItemsPage } from '@/pages/menu/MenuItemsPage';
 import { BulkUploadPage } from '@/pages/menu/BulkUploadPage';
+import { JsonBulkUploadPage } from '@/pages/menu/JsonBulkUploadPage';
 import { ThemeCustomizePage } from '@/pages/customize/ThemeCustomizePage';
 import { QRCodePage } from '@/pages/qr/QRCodePage';
 import { AnalyticsPage } from '@/pages/analytics/AnalyticsPage';
@@ -68,6 +69,7 @@ function App() {
           <Route path="/categories" element={<CategoriesPage />} />
           <Route path="/menu-items" element={<MenuItemsPage />} />
           <Route path="/bulk-upload" element={<BulkUploadPage />} />
+          <Route path="/json-bulk-upload" element={<JsonBulkUploadPage />} />
           <Route path="/customize" element={<ThemeCustomizePage />} />
           <Route path="/qr-code" element={<QRCodePage />} />
           <Route path="/analytics" element={<AnalyticsPage />} />
